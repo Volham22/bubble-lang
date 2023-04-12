@@ -1,4 +1,4 @@
-use crate::parser::assets::parse_input;
+use crate::parser::assets::parse_statements_input;
 
 use rstest::rstest;
 
@@ -38,7 +38,7 @@ use rstest::rstest;
 #[case::priority_arithmetic("(1 + 1) * 4")]
 #[case::priority_logic("(true or false) and true")]
 fn test_valid_expression(#[case] code: &str) {
-    let parser_result = parse_input(code);
+    let parser_result = parse_statements_input(code);
     assert!(
         parser_result.is_ok(),
         "Parser failed! got: {:?}",

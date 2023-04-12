@@ -127,11 +127,13 @@ pub enum Token {
     #[token("i64")]
     I64,
 
-    // Bool and string
+    // Bool, string and void
     #[token("bool")]
     Bool,
     #[token("string")]
     String,
+    #[token("void")]
+    Void,
 
     // Literals
     #[regex(r"[a-zA-Z][a-zA-Z0-9_]*", |lex| lex.slice().parse())]
@@ -142,7 +144,7 @@ pub enum Token {
     Integer(i64),
 
     #[error]
-    #[regex(r"[ \r\t\v\r]", logos::skip)]
+    #[regex(r"[ \r\t\v\r\n]", logos::skip)]
     Error,
 }
 
