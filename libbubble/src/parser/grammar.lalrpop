@@ -1,0 +1,223 @@
+#![allow(clippy::clone_on_copy, clippy::too_many_arguments, clippy::just_underscores_and_digits)]
+use crate::{
+    parser::lexer::{Token, LexicalError},
+    ast::*,
+};
+
+grammar;
+
+pub Statements: Statements = {
+    <stmt:Statement> <mut stmts:Statements> => {
+        stmts.append_statement(stmt);
+        stmts
+    },
+    <l:@L> <stmt:Statement> <r:@R> => Statements::new(l, r, vec![stmt]),
+    <l:@L> <exp:Expr> <r:@R> => {
+        Statements::new(
+            l,
+            r,
+            vec![
+                Statement::new(
+                    l,
+                    r,
+                    StatementKind::Expression(Box::new(exp))
+                )
+            ]
+        )
+    },
+}
+
+Statement: Statement = {
+    <l:@L> <exp:Expr> ";" <r:@R> => Statement::new(l, r, StatementKind::Expression(Box::new(exp))),
+    <l:@L> <if_stmt:IfStatement> <r:@R> => Statement::new(l, r, StatementKind::If(if_stmt)),
+    <l:@L> <while_statement:WhileStatement> <r:@R> => Statement::new(l, r, StatementKind::While(while_statement)),
+    <l:@L> <for_statement:ForStatement> <r:@R> => Statement::new(l, r, StatementKind::For(for_statement)),
+}
+
+IfStatement: IfStatement = {
+    <l:@L> "if" <condition:Expr> "{" <then:Statements> "}" <r:@R> => {
+        IfStatement::new(
+            l,
+            r,
+            Box::new(condition),
+            Box::new(then),
+            None
+        )
+    },
+    <l:@L> "if" <condition:Expr> "{" <then_clause:Statements> "}" "else" "{" <else_clause:Statements> "}" <r:@R> => {
+        IfStatement::new(
+            l,
+            r,
+            Box::new(condition),
+            Box::new(then_clause),
+            Some(Box::new(else_clause))
+        )
+    }
+}
+
+WhileStatement: WhileStatement = {
+    <l:@L> "while" <condition:Expr> "{" <stmts:Statements> "}" <r:@R> => WhileStatement::new(
+        l,
+        r,
+        Box::new(condition),
+        Box::new(stmts),
+    ),
+}
+
+ForStatement: ForStatement = {
+    <l:@L> "for" <val:"identifier"> "=" <init_expr:Expr> ";" <continue_expr:Expr> ";" <modify_expr:Expr> "{" <stmts:Statements> "}" <r:@R> => {
+        ForStatement::new(
+            l,
+            r,
+            val,
+            Box::new(init_expr),
+            None,
+            Box::new(continue_expr),
+            Box::new(modify_expr),
+            Box::new(stmts),
+        )
+    },
+    <l:@L> "for" <val:"identifier"> ":" <typename:Type> "=" <init_expr:Expr> ";" <continue_expr:Expr> ";" <modify_expr:Expr> "{" <stmts:Statements> "}" <r:@R> => {
+        ForStatement::new(
+            l,
+            r,
+            val,
+            Box::new(init_expr),
+            Some(typename),
+            Box::new(continue_expr),
+            Box::new(modify_expr),
+            Box::new(stmts),
+        )
+    },
+}
+
+Type: Type = {
+    <l:@L> "u8"    <r:@R> => Type::new(l, r, TypeKind::U8),
+    <l:@L> "u16"  <r:@R> => Type::new(l, r, TypeKind::U16),
+    <l:@L> "u32"  <r:@R> => Type::new(l, r, TypeKind::U32),
+    <l:@L> "u64"  <r:@R> => Type::new(l, r, TypeKind::U64),
+    <l:@L> "i8"   <r:@R> => Type::new(l, r, TypeKind::I8),
+    <l:@L> "i32"  <r:@R> => Type::new(l, r, TypeKind::I32),
+    <l:@L> "i64"  <r:@R> => Type::new(l, r, TypeKind::I64),
+    <l:@L> "bool" <r:@R> => Type::new(l, r, TypeKind::Bool),
+    <l:@L> "string" <r:@R> => Type::new(l, r, TypeKind::String),
+    <l:@L> <val:"identifier"> <r:@R> => Type::new(l, r, TypeKind::Identifier(val)),
+}
+
+Expr: Expression = {
+    <l:@L> <left:Expr> "or" <right:And> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Or, Some(Box::new(right)))),
+    And,
+}
+
+Or: Expression = {
+    <l:@L> <left:Or> "or" <right:And> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Or, Some(Box::new(right)))),
+    And,
+}
+
+And: Expression = {
+    <l:@L> <left:And> "and" <right:Equality> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::And, Some(Box::new(right)))),
+    Equality,
+}
+
+Equality: Expression = {
+    <l:@L> <left:Equality> "==" <right:Compare> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Equal, Some(Box::new(right)))),
+    <l:@L> <left:Equality> "!=" <right:Compare> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Different, Some(Box::new(right)))),
+    Compare,
+}
+
+Compare: Expression = {
+    <l:@L> <left:Compare> "<"  <right:Term> <r:@L> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Less, Some(Box::new(right)))),
+    <l:@L> <left:Compare> ">"  <right:Term> <r:@L> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::More, Some(Box::new(right)))),
+    <l:@L> <left:Compare> ">=" <right:Term> <r:@L> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::MoreEqual, Some(Box::new(right)))),
+    <l:@L> <left:Compare> "<=" <right:Term> <r:@L> => Expression::BinaryOperation(BinaryOperation::new(l, r,  Box::new(left), OpType::LessEqual, Some(Box::new(right)))),
+    Term,
+}
+
+Term: Expression = {
+    <l:@L> <left:Term> "+" <right:Factor> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Plus, Some(Box::new(right)))),
+    <l:@L> <left:Term> "-" <right:Factor> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Minus, Some(Box::new(right)))),
+    Factor,
+}
+
+Factor: Expression = {
+    <l:@L> <left:Factor> "*" <right:Unary> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Multiply, Some(Box::new(right)))),
+    <l:@L> <left:Factor> "%" <right:Unary> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Modulo, Some(Box::new(right)))),
+    <l:@L> <left:Factor> "/" <right:Unary> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Divide, Some(Box::new(right)))),
+    Unary,
+}
+
+Unary: Expression = {
+    <l:@L> "-" <primary:Group>   <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(primary), OpType::Minus, None)),
+    <l:@L> "not" <primary:Group> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(primary), OpType::Not, None)),
+    Group,
+}
+
+Group: Expression = {
+    "(" <expr:Expr> ")" => Expression::Group(Box::new(expr)),
+    <p:Primary> => Expression::Literal(p),
+}
+
+Primary: Literal = {
+    <l:@L> "true"       <r:@R> => Literal::new(l, r, LiteralType::True),
+    <l:@L> "false"      <r:@R> => Literal::new(l, r, LiteralType::False),
+    <l:@L> <val:"int">        <r:@R> => Literal::new(l, r, LiteralType::Integer(val)),
+    <l:@L> <val:"float">      <r:@R> => Literal::new(l, r, LiteralType::Float(val)),
+    <l:@L> <val:"identifier"> <r:@R> => Literal::new(l, r, LiteralType::Identifier(val)),
+}
+
+extern {
+    type Location = usize;
+    type Error = LexicalError;
+
+    enum Token {
+        "(" => Token::LeftParen,
+        ")" => Token::RightParen,
+        // "[" => Token::LeftBracket,
+        // "]" => Token::RightBracket,
+        "{" => Token::LeftCurlyBracket,
+        "}" => Token::RightCurlyBracket,
+        // "," => Token::Comma,
+        ";" => Token::Semicolon,
+        ":" => Token::Colon,
+        "=" => Token::Equal,
+        "+" => Token::Plus,
+        "-" => Token::Minus,
+        "*" => Token::Star,
+        "/" => Token::Slash,
+        "%" => Token::Percent,
+        "and" => Token::And,
+        "or" => Token::Or,
+        "not" => Token::Not,
+        "==" => Token::EqualEqual,
+        "!=" => Token::BangEqual,
+        "<" => Token::Less,
+        ">" => Token::More,
+        "<=" => Token::LessEqual,
+        ">=" => Token::MoreEqual,
+        //"function" => Token::Function,
+        //"struct" => Token::Struct,
+        "if" => Token::If,
+        "else" => Token::Else,
+        "for" => Token::For,
+        "while" => Token::While,
+        //"return" => Token::Return,
+        //"let" => Token::Let,
+        //"break" => Token::Break,
+        //"continue" => Token::Continue,
+        "true" => Token::True,
+        "false" => Token::False,
+        "u8" => Token::U8,
+        "u16" => Token::U16,
+        "u32" => Token::U32,
+        "u64" => Token::U64,
+        "i8" => Token::I8,
+        "i16" => Token::I16,
+        "i32" => Token::I32,
+        "i64" => Token::I64,
+        "bool" => Token::Bool,
+        "string" => Token::String,
+        "identifier" => Token::Identifier(<String>),
+        "int" => Token::Integer(<i64>),
+        "float" => Token::Real(<f64>),
+    }
+}

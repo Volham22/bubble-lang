@@ -4,8 +4,11 @@ use logos::{Logos, SpannedIter};
 
 pub type Spanned<Tok, Loc, Error> = Result<(Loc, Tok, Loc), Error>;
 
+#[derive(Debug)]
 pub enum LexicalError {
     InvalidToken,
+    InvalidIntegerLiteral { msg: String },
+    InvalidFloatLiteral { msg: String },
 }
 
 pub struct Lexer<'input> {
@@ -20,7 +23,7 @@ impl<'input> Lexer<'input> {
     }
 }
 
-#[derive(Logos, Debug, PartialEq)]
+#[derive(Logos, Debug, PartialEq, Clone)]
 pub enum Token {
     // Syntax elements
     #[token("(")]
@@ -65,6 +68,14 @@ pub enum Token {
     EqualEqual,
     #[token("!=")]
     BangEqual,
+    #[token("<")]
+    Less,
+    #[token(">")]
+    More,
+    #[token("<=")]
+    LessEqual,
+    #[token(">=")]
+    MoreEqual,
 
     // Keywords
     #[token("function")]
@@ -116,13 +127,19 @@ pub enum Token {
     #[token("i64")]
     I64,
 
+    // Bool and string
+    #[token("bool")]
+    Bool,
+    #[token("string")]
+    String,
+
     // Literals
     #[regex(r"[a-zA-Z][a-zA-Z0-9_]*", |lex| lex.slice().parse())]
     Identifier(String),
+    #[regex(r"([0-9]+)?\.[0-9]+", |lex| lex.slice().parse())]
+    Real(f64),
     #[regex(r"[1-9]+[0-9]*", |lex| lex.slice().parse())]
     Integer(i64),
-    #[regex(r"[0-9]?\.[0-9]+", |lex| lex.slice().parse())]
-    Real(f64),
 
     #[error]
     #[regex(r"[ \r\t\v\r]", logos::skip)]
@@ -139,11 +156,9 @@ impl<'input> Iterator for Lexer<'input> {
     type Item = Spanned<Token, usize, LexicalError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.token_stream.next().map(|(token, span)| {
-            match token {
-                Token::Error => Err(LexicalError::InvalidToken),
-                _ => Ok((span.start, token, span.end))
-            }
+        self.token_stream.next().map(|(token, span)| match token {
+            Token::Error => Err(LexicalError::InvalidToken),
+            _ => Ok((span.start, token, span.end)),
         })
     }
 }
