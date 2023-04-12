@@ -51,6 +51,18 @@ use rstest::rstest;
         Token::Semicolon
     ]
 )]
+#[case::operators(
+    "< > <= >= == !=",
+    &[
+        Token::Less,
+        Token::More,
+        Token::LessEqual,
+        Token::MoreEqual,
+        Token::EqualEqual,
+        Token::BangEqual
+    ]
+)]
+#[case::float_literal("12.3", &[ Token::Real(12.3)])]
 fn test_code_lexing(#[case] source_code: &str, #[case] expected: &[Token]) {
     let lexer = Token::lexer(source_code);
     let tokens: Vec<Token> = lexer.collect();

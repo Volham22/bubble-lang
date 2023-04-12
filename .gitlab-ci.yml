@@ -1,0 +1,35 @@
+stages:
+  - build
+  - checks
+  - tests
+  - deploy
+
+image: rust:1.68-buster
+
+compiler-build:
+  stage: build
+  artifacts:
+    untracked: true
+  script:
+    - cargo build --tests --verbose
+
+coding-style:
+  stage: checks
+  script:
+    - rustup component add rustfmt
+    - cargo fmt --check
+
+clippy:
+  stage: checks
+  script:
+    - rustup component add clippy
+    - cargo clippy -- -Dwarnings
+  dependencies:
+    - compiler-build
+
+bubble-tests:
+  stage: tests
+  script:
+    - cargo test --tests
+  dependencies:
+    - compiler-build
