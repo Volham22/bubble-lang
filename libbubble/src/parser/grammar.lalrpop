@@ -28,6 +28,7 @@ pub GlobalStatement: GlobalStatement = {
     <function:Function> => GlobalStatement::Function(function),
     <strct:Struct> => GlobalStatement::Struct(strct),
     <let_stmt:Let> => GlobalStatement::Let(let_stmt),
+    <return_stmt:Return> => GlobalStatement::Return(return_stmt),
 }
 
 Function: FunctionStatement = {
@@ -52,6 +53,10 @@ Let: LetStatement = {
     <l:@L> "let" <name:"identifier"> "=" <init_exp: Expr> ";" <r:@R> => {
         LetStatement::new(l, r, name, None, Box::new(init_exp))
     }
+}
+
+Return: ReturnStatement = {
+    <l:@L> "return" <exp:Expr> ";" <r:@R> => ReturnStatement::new(l, r, Box::new(exp)),
 }
 
 Parameter: FunctionParameter = {
@@ -253,7 +258,7 @@ extern {
         "else" => Token::Else,
         "for" => Token::For,
         "while" => Token::While,
-        //"return" => Token::Return,
+        "return" => Token::Return,
         "let" => Token::Let,
         //"break" => Token::Break,
         //"continue" => Token::Continue,

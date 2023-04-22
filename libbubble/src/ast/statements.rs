@@ -10,6 +10,7 @@ pub enum GlobalStatement {
     Function(FunctionStatement),
     Struct(StructStatement),
     Let(LetStatement),
+    Return(ReturnStatement),
 }
 
 pub type FunctionParameter = (TypeKind, String);
@@ -74,6 +75,27 @@ impl LetStatement {
 }
 
 impl Locatable for LetStatement {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
+    }
+}
+
+#[derive(Debug)]
+pub struct ReturnStatement {
+    pub exp: Box<Expression>,
+    location: TokenLocation,
+}
+
+impl ReturnStatement {
+    pub fn new(begin_tk: usize, end_tk: usize, exp: Box<Expression>) -> Self {
+        Self {
+            exp,
+            location: TokenLocation::new(begin_tk, end_tk),
+        }
+    }
+}
+
+impl Locatable for ReturnStatement {
     fn get_location(&self) -> &TokenLocation {
         &self.location
     }
