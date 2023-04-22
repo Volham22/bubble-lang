@@ -6,6 +6,63 @@ use crate::{
 
 grammar;
 
+Comma<T>: Vec<T> = {
+    <mut v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+}
+
+pub GlobalStatements: Vec<GlobalStatement> = {
+    <global_stmt: GlobalStatement> <mut stmts:GlobalStatements> => {
+        stmts.push(global_stmt);
+        stmts
+    },
+    <global_stmt: GlobalStatement> => vec![global_stmt],
+}
+
+pub GlobalStatement: GlobalStatement = {
+    <function:Function> => GlobalStatement::Function(function),
+    <strct:Struct> => GlobalStatement::Struct(strct),
+    <let_stmt:Let> => GlobalStatement::Let(let_stmt),
+    <return_stmt:Return> => GlobalStatement::Return(return_stmt),
+}
+
+Function: FunctionStatement = {
+    <l:@L> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" "{" <body:Statements> "}" <r:@R> => {
+        FunctionStatement::new(l, r, name, parameters, TypeKind::Void, body)
+    },
+    <l:@L> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" ":" <return_type:Type> "{" <body:Statements> "}" <r:@R> => {
+        FunctionStatement::new(l, r, name, parameters, return_type.kind, body)
+    },
+}
+
+Struct: StructStatement = {
+    <l:@L> "struct" <name:"identifier"> "{" <fields:Comma<Parameter>> "}" <r:@R> => {
+        StructStatement::new(l, r, name, fields)
+    }
+}
+
+Let: LetStatement = {
+    <l:@L> "let" <name:"identifier"> ":" <typename:Type> "=" <init_exp: Expr> ";" <r:@R> => {
+        LetStatement::new(l, r, name, Some(typename.kind), Box::new(init_exp))
+    },
+    <l:@L> "let" <name:"identifier"> "=" <init_exp: Expr> ";" <r:@R> => {
+        LetStatement::new(l, r, name, None, Box::new(init_exp))
+    }
+}
+
+Return: ReturnStatement = {
+    <l:@L> "return" <exp:Expr> ";" <r:@R> => ReturnStatement::new(l, r, Box::new(exp)),
+}
+
+Parameter: FunctionParameter = {
+    <name:"identifier"> ":" <ty:Type> => (ty.kind, name),
+}
+
 pub Statements: Statements = {
     <stmt:Statement> <mut stmts:Statements> => {
         stmts.append_statement(stmt);
@@ -101,6 +158,7 @@ Type: Type = {
     <l:@L> "i64"  <r:@R> => Type::new(l, r, TypeKind::I64),
     <l:@L> "bool" <r:@R> => Type::new(l, r, TypeKind::Bool),
     <l:@L> "string" <r:@R> => Type::new(l, r, TypeKind::String),
+    <l:@L> "void" <r:@R> => Type::new(l, r, TypeKind::Void),
     <l:@L> <val:"identifier"> <r:@R> => Type::new(l, r, TypeKind::Identifier(val)),
 }
 
@@ -176,7 +234,7 @@ extern {
         // "]" => Token::RightBracket,
         "{" => Token::LeftCurlyBracket,
         "}" => Token::RightCurlyBracket,
-        // "," => Token::Comma,
+        "," => Token::Comma,
         ";" => Token::Semicolon,
         ":" => Token::Colon,
         "=" => Token::Equal,
@@ -194,14 +252,14 @@ extern {
         ">" => Token::More,
         "<=" => Token::LessEqual,
         ">=" => Token::MoreEqual,
-        //"function" => Token::Function,
-        //"struct" => Token::Struct,
+        "function" => Token::Function,
+        "struct" => Token::Struct,
         "if" => Token::If,
         "else" => Token::Else,
         "for" => Token::For,
         "while" => Token::While,
-        //"return" => Token::Return,
-        //"let" => Token::Let,
+        "return" => Token::Return,
+        "let" => Token::Let,
         //"break" => Token::Break,
         //"continue" => Token::Continue,
         "true" => Token::True,
@@ -215,6 +273,7 @@ extern {
         "i32" => Token::I32,
         "i64" => Token::I64,
         "bool" => Token::Bool,
+        "void" => Token::Void,
         "string" => Token::String,
         "identifier" => Token::Identifier(<String>),
         "int" => Token::Integer(<i64>),

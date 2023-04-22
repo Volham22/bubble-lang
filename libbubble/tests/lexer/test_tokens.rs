@@ -62,6 +62,28 @@ use rstest::rstest;
         Token::BangEqual
     ]
 )]
+#[case::multiline_code(
+    r#"
+        function f() { 42 }
+        function g() { 42 }
+    "#,
+    &[
+        Token::Function,
+        Token::Identifier("f".to_string()),
+        Token::LeftParen,
+        Token::RightParen,
+        Token::LeftCurlyBracket,
+        Token::Integer(42),
+        Token::RightCurlyBracket,
+        Token::Function,
+        Token::Identifier("g".to_string()),
+        Token::LeftParen,
+        Token::RightParen,
+        Token::LeftCurlyBracket,
+        Token::Integer(42),
+        Token::RightCurlyBracket,
+    ]
+)]
 #[case::float_literal("12.3", &[ Token::Real(12.3)])]
 fn test_code_lexing(#[case] source_code: &str, #[case] expected: &[Token]) {
     let lexer = Token::lexer(source_code);

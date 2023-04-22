@@ -34,4 +34,5 @@ pub enum TypeKind {
     String,
     Bool,
     Identifier(String),
+    Void,
 }

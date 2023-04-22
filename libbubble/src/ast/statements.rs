@@ -2,7 +2,132 @@ use super::{
     expressions::Expression,
     location::{Locatable, TokenLocation},
     types::Type,
+    TypeKind,
 };
+
+#[derive(Debug)]
+pub enum GlobalStatement {
+    Function(FunctionStatement),
+    Struct(StructStatement),
+    Let(LetStatement),
+    Return(ReturnStatement),
+}
+
+pub type FunctionParameter = (TypeKind, String);
+
+#[derive(Debug)]
+pub struct FunctionStatement {
+    pub name: String,
+    pub parameters: Vec<FunctionParameter>,
+    pub return_type: TypeKind,
+    pub body: Statements,
+    location: TokenLocation,
+}
+
+impl FunctionStatement {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        name: String,
+        parameters: Vec<FunctionParameter>,
+        return_type: TypeKind,
+        body: Statements,
+    ) -> Self {
+        Self {
+            name,
+            parameters,
+            return_type,
+            body,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+impl Locatable for FunctionStatement {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
+    }
+}
+
+#[derive(Debug)]
+pub struct LetStatement {
+    pub name: String,
+    pub declaration_type: Option<TypeKind>,
+    pub init_exp: Box<Expression>,
+    location: TokenLocation,
+}
+
+impl LetStatement {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        name: String,
+        declaration_type: Option<TypeKind>,
+        init_exp: Box<Expression>,
+    ) -> Self {
+        Self {
+            name,
+            declaration_type,
+            init_exp,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+impl Locatable for LetStatement {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
+    }
+}
+
+#[derive(Debug)]
+pub struct ReturnStatement {
+    pub exp: Box<Expression>,
+    location: TokenLocation,
+}
+
+impl ReturnStatement {
+    pub fn new(begin_tk: usize, end_tk: usize, exp: Box<Expression>) -> Self {
+        Self {
+            exp,
+            location: TokenLocation::new(begin_tk, end_tk),
+        }
+    }
+}
+
+impl Locatable for ReturnStatement {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
+    }
+}
+
+#[derive(Debug)]
+pub struct StructStatement {
+    pub name: String,
+    pub fields: Vec<FunctionParameter>,
+    location: TokenLocation,
+}
+
+impl StructStatement {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        name: String,
+        fields: Vec<FunctionParameter>,
+    ) -> Self {
+        Self {
+            name,
+            fields,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+impl Locatable for StructStatement {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
+    }
+}
 
 #[derive(Debug)]
 pub struct Statements {
