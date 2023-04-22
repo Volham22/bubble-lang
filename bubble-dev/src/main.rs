@@ -1,5 +1,4 @@
-use libbubble::parser::grammar::StatementsParser;
-use libbubble::parser::lexer::Lexer;
+use libbubble::parser::{grammar::StatementsParser, lexer::Lexer};
 
 fn main() {
     let lexer = Lexer::new("if true { true } else { false }");

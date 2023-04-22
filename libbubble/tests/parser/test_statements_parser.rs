@@ -45,6 +45,8 @@ fn test_valid_statements(#[case] code: &str) {
 #[case::struct_one_field("struct A { a: bool }")]
 #[case::struct_multiple_fields("struct A { a: bool, b: u32, c: string, }")]
 #[case::struct_no_fields("struct A {}")]
+#[case::let_statement_with_type("let a: u32 = 32;")]
+#[case::let_statement_without_type("let a = 32;")]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

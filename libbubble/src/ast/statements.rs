@@ -9,6 +9,7 @@ use super::{
 pub enum GlobalStatement {
     Function(FunctionStatement),
     Struct(StructStatement),
+    Let(LetStatement),
 }
 
 pub type FunctionParameter = (TypeKind, String);
@@ -42,6 +43,37 @@ impl FunctionStatement {
 }
 
 impl Locatable for FunctionStatement {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
+    }
+}
+
+#[derive(Debug)]
+pub struct LetStatement {
+    pub name: String,
+    pub declaration_type: Option<TypeKind>,
+    pub init_exp: Box<Expression>,
+    location: TokenLocation,
+}
+
+impl LetStatement {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        name: String,
+        declaration_type: Option<TypeKind>,
+        init_exp: Box<Expression>,
+    ) -> Self {
+        Self {
+            name,
+            declaration_type,
+            init_exp,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+impl Locatable for LetStatement {
     fn get_location(&self) -> &TokenLocation {
         &self.location
     }

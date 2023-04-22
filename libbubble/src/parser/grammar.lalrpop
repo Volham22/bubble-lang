@@ -27,6 +27,7 @@ pub GlobalStatements: Vec<GlobalStatement> = {
 pub GlobalStatement: GlobalStatement = {
     <function:Function> => GlobalStatement::Function(function),
     <strct:Struct> => GlobalStatement::Struct(strct),
+    <let_stmt:Let> => GlobalStatement::Let(let_stmt),
 }
 
 Function: FunctionStatement = {
@@ -41,6 +42,15 @@ Function: FunctionStatement = {
 Struct: StructStatement = {
     <l:@L> "struct" <name:"identifier"> "{" <fields:Comma<Parameter>> "}" <r:@R> => {
         StructStatement::new(l, r, name, fields)
+    }
+}
+
+Let: LetStatement = {
+    <l:@L> "let" <name:"identifier"> ":" <typename:Type> "=" <init_exp: Expr> ";" <r:@R> => {
+        LetStatement::new(l, r, name, Some(typename.kind), Box::new(init_exp))
+    },
+    <l:@L> "let" <name:"identifier"> "=" <init_exp: Expr> ";" <r:@R> => {
+        LetStatement::new(l, r, name, None, Box::new(init_exp))
     }
 }
 
@@ -244,7 +254,7 @@ extern {
         "for" => Token::For,
         "while" => Token::While,
         //"return" => Token::Return,
-        //"let" => Token::Let,
+        "let" => Token::Let,
         //"break" => Token::Break,
         //"continue" => Token::Continue,
         "true" => Token::True,
