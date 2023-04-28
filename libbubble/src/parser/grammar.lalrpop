@@ -28,7 +28,6 @@ pub GlobalStatement: GlobalStatement = {
     <function:Function> => GlobalStatement::Function(function),
     <strct:Struct> => GlobalStatement::Struct(strct),
     <let_stmt:Let> => GlobalStatement::Let(let_stmt),
-    <return_stmt:Return> => GlobalStatement::Return(return_stmt),
 }
 
 Function: FunctionStatement = {
@@ -57,6 +56,14 @@ Let: LetStatement = {
 
 Return: ReturnStatement = {
     <l:@L> "return" <exp:Expr> ";" <r:@R> => ReturnStatement::new(l, r, Box::new(exp)),
+}
+
+Break: BreakStatement = {
+    <l:@L> "break" ";" <r:@R> => BreakStatement::new(l, r),
+}
+
+Continue: ContinueStatement = {
+    <l:@L> "continue" ";" <r:@R> => ContinueStatement::new(l, r),
 }
 
 Parameter: FunctionParameter = {
@@ -89,6 +96,9 @@ Statement: Statement = {
     <l:@L> <if_stmt:IfStatement> <r:@R> => Statement::new(l, r, StatementKind::If(if_stmt)),
     <l:@L> <while_statement:WhileStatement> <r:@R> => Statement::new(l, r, StatementKind::While(while_statement)),
     <l:@L> <for_statement:ForStatement> <r:@R> => Statement::new(l, r, StatementKind::For(for_statement)),
+    <l:@L> <return_stmt:Return> <r:@R> => Statement::new(l, r, StatementKind::Return(return_stmt)),
+    <l:@L> <continue_stmt:Continue> <r:@R> => Statement::new(l, r, StatementKind::Continue(continue_stmt)),
+    <l:@L> <break_stmt:Break> <r:@R> => Statement::new(l, r, StatementKind::Break(break_stmt)),
 }
 
 IfStatement: IfStatement = {
@@ -260,8 +270,8 @@ extern {
         "while" => Token::While,
         "return" => Token::Return,
         "let" => Token::Let,
-        //"break" => Token::Break,
-        //"continue" => Token::Continue,
+        "break" => Token::Break,
+        "continue" => Token::Continue,
         "true" => Token::True,
         "false" => Token::False,
         "u8" => Token::U8,
