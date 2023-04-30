@@ -37,6 +37,10 @@ use rstest::rstest;
 #[case::simple_parenthesis("(1 + 1)")]
 #[case::priority_arithmetic("(1 + 1) * 4")]
 #[case::priority_logic("(true or false) and true")]
+#[case::call_no_arg("f()")]
+#[case::call_one_arg("f(42)")]
+#[case::call_multiples_args("f(42, 3, false, true, 21 + 32)")]
+#[case::call_multiples_args_trailing_comma("f(42, 3, false, true, 21 + 32,)")]
 fn test_valid_expression(#[case] code: &str) {
     let parser_result = parse_statements_input(code);
     assert!(

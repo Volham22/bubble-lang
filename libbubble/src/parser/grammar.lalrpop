@@ -223,6 +223,7 @@ Unary: Expression = {
 Group: Expression = {
     "(" <expr:Expr> ")" => Expression::Group(Box::new(expr)),
     <p:Primary> => Expression::Literal(p),
+    <l:@L> <callee:"identifier"> "(" <args:Comma<Expr>> ")" <r:@R> => Expression::Call(Call::new(l, r, callee, args)),
 }
 
 Primary: Literal = {
