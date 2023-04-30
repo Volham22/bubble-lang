@@ -10,7 +10,7 @@ pub enum GlobalStatement {
     Function(FunctionStatement),
     Struct(StructStatement),
     Let(LetStatement),
-    Return(ReturnStatement),
+    Continue(ContinueStatement),
 }
 
 pub type FunctionParameter = (TypeKind, String);
@@ -102,6 +102,44 @@ impl Locatable for ReturnStatement {
 }
 
 #[derive(Debug)]
+pub struct BreakStatement {
+    location: TokenLocation,
+}
+
+impl BreakStatement {
+    pub fn new(tk_begin: usize, tk_end: usize) -> Self {
+        Self {
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+impl Locatable for BreakStatement {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
+    }
+}
+
+#[derive(Debug)]
+pub struct ContinueStatement {
+    location: TokenLocation,
+}
+
+impl ContinueStatement {
+    pub fn new(tk_begin: usize, tk_end: usize) -> Self {
+        Self {
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+impl Locatable for ContinueStatement {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
+    }
+}
+
+#[derive(Debug)]
 pub struct StructStatement {
     pub name: String,
     pub fields: Vec<FunctionParameter>,
@@ -180,6 +218,9 @@ pub enum StatementKind {
     If(IfStatement),
     While(WhileStatement),
     For(ForStatement),
+    Return(ReturnStatement),
+    Break(BreakStatement),
+    Continue(ContinueStatement),
     Expression(Box<Expression>),
 }
 

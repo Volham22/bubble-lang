@@ -5,6 +5,30 @@ pub enum Expression {
     Group(Box<Expression>),
     BinaryOperation(BinaryOperation),
     Literal(Literal),
+    Call(Call),
+}
+
+#[derive(Debug)]
+pub struct Call {
+    pub callee: String,
+    pub arguments: Vec<Expression>,
+    location: TokenLocation,
+}
+
+impl Call {
+    pub fn new(tk_begin: usize, tk_end: usize, callee: String, arguments: Vec<Expression>) -> Self {
+        Self {
+            callee,
+            arguments,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+impl Locatable for Call {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
+    }
 }
 
 #[derive(Debug)]

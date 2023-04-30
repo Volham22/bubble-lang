@@ -47,7 +47,27 @@ fn test_valid_statements(#[case] code: &str) {
 #[case::struct_no_fields("struct A {}")]
 #[case::let_statement_with_type("let a: u32 = 32;")]
 #[case::let_statement_without_type("let a = 32;")]
-#[case::return_statement("return 43;")]
+#[case::return_in_function(
+    r#"
+    function f(): i32 {
+        return 42;
+    }
+"#
+)]
+#[case::break_in_function_loop(
+    r#"
+    function f() {
+        while true { break; }
+    }
+"#
+)]
+#[case::continue_in_function_loop(
+    r#"
+    function f() {
+        while true { continue; }
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(
