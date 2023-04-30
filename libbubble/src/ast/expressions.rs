@@ -1,4 +1,7 @@
-use super::location::{Locatable, TokenLocation};
+use super::{
+    location::{Locatable, TokenLocation},
+    visitor::Visitor,
+};
 
 #[derive(Debug)]
 pub enum Expression {
@@ -6,6 +9,12 @@ pub enum Expression {
     BinaryOperation(BinaryOperation),
     Literal(Literal),
     Call(Call),
+}
+
+impl Expression {
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_expression(self);
+    }
 }
 
 #[derive(Debug)]
@@ -22,6 +31,10 @@ impl Call {
             arguments,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_call(self);
     }
 }
 
@@ -53,6 +66,10 @@ impl BinaryOperation {
             op,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_binary_operation(self);
     }
 }
 

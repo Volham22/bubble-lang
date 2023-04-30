@@ -2,6 +2,7 @@ use super::{
     expressions::Expression,
     location::{Locatable, TokenLocation},
     types::Type,
+    visitor::Visitor,
     TypeKind,
 };
 
@@ -10,7 +11,6 @@ pub enum GlobalStatement {
     Function(FunctionStatement),
     Struct(StructStatement),
     Let(LetStatement),
-    Continue(ContinueStatement),
 }
 
 pub type FunctionParameter = (TypeKind, String);
@@ -40,6 +40,10 @@ impl FunctionStatement {
             body,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_function(self);
     }
 }
 
@@ -72,6 +76,10 @@ impl LetStatement {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_let(self);
+    }
 }
 
 impl Locatable for LetStatement {
@@ -93,6 +101,10 @@ impl ReturnStatement {
             location: TokenLocation::new(begin_tk, end_tk),
         }
     }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_return(self);
+    }
 }
 
 impl Locatable for ReturnStatement {
@@ -112,6 +124,10 @@ impl BreakStatement {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_break(self);
+    }
 }
 
 impl Locatable for BreakStatement {
@@ -130,6 +146,10 @@ impl ContinueStatement {
         Self {
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_continue(self);
     }
 }
 
@@ -158,6 +178,10 @@ impl StructStatement {
             fields,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_struct(self);
     }
 }
 
@@ -223,6 +247,19 @@ pub enum StatementKind {
     Continue(ContinueStatement),
     Expression(Box<Expression>),
 }
+impl StatementKind {
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        match self {
+            StatementKind::If(stmt) => stmt.accept(v),
+            StatementKind::While(stmt) => stmt.accept(v),
+            StatementKind::For(stmt) => stmt.accept(v),
+            StatementKind::Return(stmt) => stmt.accept(v),
+            StatementKind::Break(stmt) => stmt.accept(v),
+            StatementKind::Continue(stmt) => stmt.accept(v),
+            StatementKind::Expression(stmt) => stmt.accept(v),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct IfStatement {
@@ -246,6 +283,10 @@ impl IfStatement {
             else_clause,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_if(self);
     }
 }
 
@@ -274,6 +315,10 @@ impl WhileStatement {
             body,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_while(self);
     }
 }
 
@@ -315,6 +360,10 @@ impl ForStatement {
             body,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+        v.visit_for(self);
     }
 }
 

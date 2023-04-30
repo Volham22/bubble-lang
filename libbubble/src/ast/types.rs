@@ -1,4 +1,7 @@
-use super::location::{Locatable, TokenLocation};
+use super::{
+    location::{Locatable, TokenLocation},
+    visitor::Visitor,
+};
 
 #[derive(Debug)]
 pub struct Type {
@@ -35,4 +38,8 @@ pub enum TypeKind {
     Bool,
     Identifier(String),
     Void,
+}
+
+impl TypeKind {
+    pub fn accept<T: Visitor + ?Sized>(&self, _: &T) {}
 }
