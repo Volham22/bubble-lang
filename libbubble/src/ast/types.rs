@@ -1,4 +1,7 @@
-use super::location::{Locatable, TokenLocation};
+use super::{
+    location::{Locatable, TokenLocation},
+    visitor::Visitor,
+};
 
 #[derive(Debug)]
 pub struct Type {
@@ -35,4 +38,14 @@ pub enum TypeKind {
     Bool,
     Identifier(String),
     Void,
+}
+
+impl TypeKind {
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_type_kind(self)
+    }
 }

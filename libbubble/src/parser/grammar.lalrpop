@@ -18,7 +18,7 @@ Comma<T>: Vec<T> = {
 
 pub GlobalStatements: Vec<GlobalStatement> = {
     <global_stmt: GlobalStatement> <mut stmts:GlobalStatements> => {
-        stmts.push(global_stmt);
+        stmts.insert(0, global_stmt);
         stmts
     },
     <global_stmt: GlobalStatement> => vec![global_stmt],
@@ -99,6 +99,7 @@ Statement: Statement = {
     <l:@L> <return_stmt:Return> <r:@R> => Statement::new(l, r, StatementKind::Return(return_stmt)),
     <l:@L> <continue_stmt:Continue> <r:@R> => Statement::new(l, r, StatementKind::Continue(continue_stmt)),
     <l:@L> <break_stmt:Break> <r:@R> => Statement::new(l, r, StatementKind::Break(break_stmt)),
+    <l:@L> <let_stmt:Let> <r:@R> => Statement::new(l, r, StatementKind::Let(let_stmt)),
 }
 
 IfStatement: IfStatement = {

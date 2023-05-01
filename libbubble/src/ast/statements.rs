@@ -2,6 +2,7 @@ use super::{
     expressions::Expression,
     location::{Locatable, TokenLocation},
     types::Type,
+    visitor::Visitor,
     TypeKind,
 };
 
@@ -10,7 +11,6 @@ pub enum GlobalStatement {
     Function(FunctionStatement),
     Struct(StructStatement),
     Let(LetStatement),
-    Continue(ContinueStatement),
 }
 
 pub type FunctionParameter = (TypeKind, String);
@@ -40,6 +40,14 @@ impl FunctionStatement {
             body,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: Visitor<E> + ?Sized,
+    {
+        v.visit_function(self)
     }
 }
 
@@ -72,6 +80,14 @@ impl LetStatement {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: Visitor<E> + ?Sized,
+    {
+        v.visit_let(self)
+    }
 }
 
 impl Locatable for LetStatement {
@@ -93,6 +109,14 @@ impl ReturnStatement {
             location: TokenLocation::new(begin_tk, end_tk),
         }
     }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_return(self)
+    }
 }
 
 impl Locatable for ReturnStatement {
@@ -112,6 +136,14 @@ impl BreakStatement {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_break(self)
+    }
 }
 
 impl Locatable for BreakStatement {
@@ -130,6 +162,14 @@ impl ContinueStatement {
         Self {
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<E, T>(&self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: Visitor<E> + ?Sized,
+    {
+        v.visit_continue(self)
     }
 }
 
@@ -159,6 +199,14 @@ impl StructStatement {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_struct(self)
+    }
 }
 
 impl Locatable for StructStatement {
@@ -182,7 +230,7 @@ impl Statements {
     }
 
     pub fn append_statement(&mut self, stmt: Statement) {
-        self.statements.push(stmt);
+        self.statements.insert(0, stmt);
     }
 }
 
@@ -216,12 +264,31 @@ impl Locatable for Statement {
 #[derive(Debug)]
 pub enum StatementKind {
     If(IfStatement),
+    Let(LetStatement),
     While(WhileStatement),
     For(ForStatement),
     Return(ReturnStatement),
     Break(BreakStatement),
     Continue(ContinueStatement),
     Expression(Box<Expression>),
+}
+impl StatementKind {
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        match self {
+            StatementKind::If(stmt) => stmt.accept(v),
+            StatementKind::While(stmt) => stmt.accept(v),
+            StatementKind::For(stmt) => stmt.accept(v),
+            StatementKind::Return(stmt) => stmt.accept(v),
+            StatementKind::Break(stmt) => stmt.accept(v),
+            StatementKind::Continue(stmt) => stmt.accept(v),
+            StatementKind::Expression(stmt) => stmt.accept(v),
+            StatementKind::Let(stmt) => stmt.accept(v),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -246,6 +313,14 @@ impl IfStatement {
             else_clause,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_if(self)
     }
 }
 
@@ -274,6 +349,14 @@ impl WhileStatement {
             body,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_while(self)
     }
 }
 
@@ -315,6 +398,14 @@ impl ForStatement {
             body,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_for(self)
     }
 }
 

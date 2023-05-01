@@ -1,4 +1,7 @@
-use super::location::{Locatable, TokenLocation};
+use super::{
+    location::{Locatable, TokenLocation},
+    visitor::Visitor,
+};
 
 #[derive(Debug)]
 pub enum Expression {
@@ -6,6 +9,16 @@ pub enum Expression {
     BinaryOperation(BinaryOperation),
     Literal(Literal),
     Call(Call),
+}
+
+impl Expression {
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_expression(self)
+    }
 }
 
 #[derive(Debug)]
@@ -22,6 +35,14 @@ impl Call {
             arguments,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_call(self)
     }
 }
 
@@ -54,6 +75,14 @@ impl BinaryOperation {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_binary_operation(self)
+    }
 }
 
 impl Locatable for BinaryOperation {
@@ -74,6 +103,14 @@ impl Literal {
             literal_type,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_literal(self)
     }
 }
 

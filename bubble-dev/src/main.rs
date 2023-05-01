@@ -1,12 +1,33 @@
-use libbubble::parser::{grammar::StatementsParser, lexer::Lexer};
+use libbubble::{
+    ast,
+    parser::{grammar::GlobalStatementsParser, lexer::Lexer},
+};
 
 fn main() {
-    let lexer = Lexer::new("if true { true } else { false }");
-    let parser = StatementsParser::new();
+    let lexer = Lexer::new(
+        r#"
+    function f() { 42 }
+    function g(a: u32, b: bool) {
+        let n = 32;
 
-    if let Err(err) = parser.parse(lexer) {
-        eprintln!("Parsing failed {:?}", err);
-    } else {
-        println!("Parsing OK!");
+        while n > 21 {
+            32
+        }
+
+        return n;
+    }
+    function h(b: bool) { 42 }
+"#,
+    );
+    let parser = GlobalStatementsParser::new();
+
+    match parser.parse(lexer) {
+        Ok(stmts) => {
+            let mut printer = ast::Printer::default();
+            printer.print(stmts).expect("write to stdio failed");
+        }
+        Err(err) => {
+            eprintln!("{err:?}");
+        }
     }
 }

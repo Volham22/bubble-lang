@@ -15,6 +15,7 @@ use rstest::rstest;
 #[case::valid_equal("true == true")]
 #[case::valid_equal_left_assoc("true == true == true == true")]
 #[case::valid_less("1 < 2")]
+#[case::valid_less_identifier("a < 2")]
 #[case::valid_less_equal("1 <= 2")]
 #[case::valid_less_equal_left_assoc("1 <= 2 <= 3")]
 #[case::valid_less_left_assoc("1 < 2 < 3")]
