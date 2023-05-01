@@ -41,5 +41,11 @@ pub enum TypeKind {
 }
 
 impl TypeKind {
-    pub fn accept<T: Visitor + ?Sized>(&self, _: &T) {}
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_type_kind(self)
+    }
 }

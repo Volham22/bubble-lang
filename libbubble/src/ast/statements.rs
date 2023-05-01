@@ -42,8 +42,12 @@ impl FunctionStatement {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_function(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: Visitor<E> + ?Sized,
+    {
+        v.visit_function(self)
     }
 }
 
@@ -77,8 +81,12 @@ impl LetStatement {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_let(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: Visitor<E> + ?Sized,
+    {
+        v.visit_let(self)
     }
 }
 
@@ -102,8 +110,12 @@ impl ReturnStatement {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_return(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_return(self)
     }
 }
 
@@ -125,8 +137,12 @@ impl BreakStatement {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_break(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_break(self)
     }
 }
 
@@ -148,8 +164,12 @@ impl ContinueStatement {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_continue(self);
+    pub fn accept<E, T>(&self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: Visitor<E> + ?Sized,
+    {
+        v.visit_continue(self)
     }
 }
 
@@ -180,8 +200,12 @@ impl StructStatement {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_struct(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_struct(self)
     }
 }
 
@@ -206,7 +230,7 @@ impl Statements {
     }
 
     pub fn append_statement(&mut self, stmt: Statement) {
-        self.statements.push(stmt);
+        self.statements.insert(0, stmt);
     }
 }
 
@@ -240,6 +264,7 @@ impl Locatable for Statement {
 #[derive(Debug)]
 pub enum StatementKind {
     If(IfStatement),
+    Let(LetStatement),
     While(WhileStatement),
     For(ForStatement),
     Return(ReturnStatement),
@@ -248,7 +273,11 @@ pub enum StatementKind {
     Expression(Box<Expression>),
 }
 impl StatementKind {
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
         match self {
             StatementKind::If(stmt) => stmt.accept(v),
             StatementKind::While(stmt) => stmt.accept(v),
@@ -257,6 +286,7 @@ impl StatementKind {
             StatementKind::Break(stmt) => stmt.accept(v),
             StatementKind::Continue(stmt) => stmt.accept(v),
             StatementKind::Expression(stmt) => stmt.accept(v),
+            StatementKind::Let(stmt) => stmt.accept(v),
         }
     }
 }
@@ -285,8 +315,12 @@ impl IfStatement {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_if(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_if(self)
     }
 }
 
@@ -317,8 +351,12 @@ impl WhileStatement {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_while(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_while(self)
     }
 }
 
@@ -362,8 +400,12 @@ impl ForStatement {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_for(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_for(self)
     }
 }
 

@@ -12,8 +12,12 @@ pub enum Expression {
 }
 
 impl Expression {
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_expression(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_expression(self)
     }
 }
 
@@ -33,8 +37,12 @@ impl Call {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_call(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_call(self)
     }
 }
 
@@ -68,8 +76,12 @@ impl BinaryOperation {
         }
     }
 
-    pub fn accept<T: Visitor + ?Sized>(&self, v: &T) {
-        v.visit_binary_operation(self);
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_binary_operation(self)
     }
 }
 
@@ -91,6 +103,14 @@ impl Literal {
             literal_type,
             location: TokenLocation::new(tk_begin, tk_end),
         }
+    }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_literal(self)
     }
 }
 
