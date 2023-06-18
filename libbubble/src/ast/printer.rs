@@ -3,7 +3,7 @@ use std::io;
 use super::{
     visitor::Visitor, BinaryOperation, BreakStatement, Call, ContinueStatement, ForStatement,
     FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, ReturnStatement,
-    StructStatement, TypeKind, WhileStatement,
+    StructStatement, Type, TypeKind, WhileStatement,
 };
 
 pub struct Printer<Writer: io::Write> {
@@ -235,8 +235,8 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
         Ok(())
     }
 
-    fn visit_type_kind(&mut self, ty: &TypeKind) -> PrinterResult {
-        match ty {
+    fn visit_type(&mut self, ty: &Type) -> PrinterResult {
+        match &ty.kind {
             TypeKind::U8 => self.write("u8"),
             TypeKind::U16 => self.write("u16"),
             TypeKind::U32 => self.write("u32"),
@@ -247,7 +247,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
             TypeKind::I64 => self.write("i64"),
             TypeKind::String => self.write("string"),
             TypeKind::Bool => self.write("bool"),
-            TypeKind::Identifier(id) => self.write(id),
+            TypeKind::Identifier(id) => self.write(&id),
             TypeKind::Void => self.write("<void>"), // void does not exists
         }
     }

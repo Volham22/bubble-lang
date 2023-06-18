@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TokenLocation {
     pub line: usize,
     pub column: usize,

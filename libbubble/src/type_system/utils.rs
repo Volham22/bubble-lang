@@ -31,18 +31,16 @@ impl<T: Locatable> ScopedMap<T> {
     }
 
     pub fn find_symbol(&self, symbol: &str) -> Option<&T> {
-        self.0
-            .iter()
-            .rev()
-            .find(|scope| scope.get(symbol).is_some())
-            .map(|map| map.get(symbol).unwrap())
+        self.0.iter().rev().find_map(|scope| scope.get(symbol))
     }
 
+    #[cfg(test)] // it is only used to tests the implementation
     pub fn len(&self) -> usize {
         self.0.len()
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::ScopedMap;
     use crate::ast;

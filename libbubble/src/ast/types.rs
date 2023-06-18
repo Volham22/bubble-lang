@@ -1,12 +1,15 @@
 use super::{
+    bindable::Definition,
     location::{Locatable, TokenLocation},
     visitor::Visitor,
+    MutableVisitor,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Type {
     pub kind: TypeKind,
     location: TokenLocation,
+    pub(crate) definition: Option<Definition>,
 }
 
 impl Type {
@@ -14,7 +17,24 @@ impl Type {
         Self {
             kind,
             location: TokenLocation::new(tk_begin, tk_end),
+            definition: None,
         }
+    }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_type(self)
+    }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_type(self)
     }
 }
 
@@ -24,7 +44,7 @@ impl Locatable for Type {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TypeKind {
     U8,
     U16,
@@ -44,6 +64,14 @@ impl TypeKind {
     pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
     where
         T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_type_kind(self)
+    }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
         E: std::error::Error,
     {
         v.visit_type_kind(self)

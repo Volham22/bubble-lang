@@ -3,19 +3,45 @@ use super::{
     location::{Locatable, TokenLocation},
     types::Type,
     visitor::Visitor,
-    TypeKind,
+    MutableVisitor, TypeKind,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum GlobalStatement {
     Function(FunctionStatement),
     Struct(StructStatement),
     Let(LetStatement),
 }
 
+impl GlobalStatement {
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: Visitor<E> + ?Sized,
+    {
+        match self {
+            GlobalStatement::Function(f) => v.visit_function(f),
+            GlobalStatement::Struct(s) => v.visit_struct(s),
+            GlobalStatement::Let(l) => v.visit_let(l),
+        }
+    }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: MutableVisitor<E> + ?Sized,
+    {
+        match self {
+            GlobalStatement::Function(f) => v.visit_function(f),
+            GlobalStatement::Struct(s) => v.visit_struct(s),
+            GlobalStatement::Let(l) => v.visit_let(l),
+        }
+    }
+}
+
 pub type FunctionParameter = (TypeKind, String);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionStatement {
     pub name: String,
     pub parameters: Vec<FunctionParameter>,
@@ -49,6 +75,14 @@ impl FunctionStatement {
     {
         v.visit_function(self)
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: MutableVisitor<E> + ?Sized,
+    {
+        v.visit_function(self)
+    }
 }
 
 impl Locatable for FunctionStatement {
@@ -57,7 +91,7 @@ impl Locatable for FunctionStatement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LetStatement {
     pub name: String,
     pub declaration_type: Option<TypeKind>,
@@ -88,6 +122,14 @@ impl LetStatement {
     {
         v.visit_let(self)
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: MutableVisitor<E> + ?Sized,
+    {
+        v.visit_let(self)
+    }
 }
 
 impl Locatable for LetStatement {
@@ -96,7 +138,7 @@ impl Locatable for LetStatement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ReturnStatement {
     pub exp: Box<Expression>,
     location: TokenLocation,
@@ -117,6 +159,14 @@ impl ReturnStatement {
     {
         v.visit_return(self)
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_return(self)
+    }
 }
 
 impl Locatable for ReturnStatement {
@@ -125,7 +175,7 @@ impl Locatable for ReturnStatement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BreakStatement {
     location: TokenLocation,
 }
@@ -144,6 +194,14 @@ impl BreakStatement {
     {
         v.visit_break(self)
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_break(self)
+    }
 }
 
 impl Locatable for BreakStatement {
@@ -152,7 +210,7 @@ impl Locatable for BreakStatement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ContinueStatement {
     location: TokenLocation,
 }
@@ -171,6 +229,14 @@ impl ContinueStatement {
     {
         v.visit_continue(self)
     }
+
+    pub fn accept_mut<E, T>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        E: std::error::Error,
+        T: MutableVisitor<E> + ?Sized,
+    {
+        v.visit_continue(self)
+    }
 }
 
 impl Locatable for ContinueStatement {
@@ -179,7 +245,7 @@ impl Locatable for ContinueStatement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StructStatement {
     pub name: String,
     pub fields: Vec<FunctionParameter>,
@@ -207,6 +273,14 @@ impl StructStatement {
     {
         v.visit_struct(self)
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_struct(self)
+    }
 }
 
 impl Locatable for StructStatement {
@@ -215,7 +289,7 @@ impl Locatable for StructStatement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Statements {
     pub statements: Vec<Statement>,
     location: TokenLocation,
@@ -240,7 +314,7 @@ impl Locatable for Statements {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Statement {
     pub kind: StatementKind,
     location: TokenLocation,
@@ -261,7 +335,7 @@ impl Locatable for Statement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum StatementKind {
     If(IfStatement),
     Let(LetStatement),
@@ -289,9 +363,26 @@ impl StatementKind {
             StatementKind::Let(stmt) => stmt.accept(v),
         }
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        match self {
+            StatementKind::If(stmt) => stmt.accept_mut(v),
+            StatementKind::While(stmt) => stmt.accept_mut(v),
+            StatementKind::For(stmt) => stmt.accept_mut(v),
+            StatementKind::Return(stmt) => stmt.accept_mut(v),
+            StatementKind::Break(stmt) => stmt.accept_mut(v),
+            StatementKind::Continue(stmt) => stmt.accept_mut(v),
+            StatementKind::Expression(stmt) => stmt.accept_mut(v),
+            StatementKind::Let(stmt) => stmt.accept_mut(v),
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IfStatement {
     pub condition: Box<Expression>,
     pub then_clause: Box<Statements>,
@@ -322,6 +413,14 @@ impl IfStatement {
     {
         v.visit_if(self)
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_if(self)
+    }
 }
 
 impl Locatable for IfStatement {
@@ -330,7 +429,7 @@ impl Locatable for IfStatement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WhileStatement {
     pub condition: Box<Expression>,
     pub body: Box<Statements>,
@@ -358,6 +457,14 @@ impl WhileStatement {
     {
         v.visit_while(self)
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_while(self)
+    }
 }
 
 impl Locatable for WhileStatement {
@@ -366,7 +473,7 @@ impl Locatable for WhileStatement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ForStatement {
     pub init_identifier: String,
     pub init_expression: Box<Expression>,
@@ -403,6 +510,14 @@ impl ForStatement {
     pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
     where
         T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_for(self)
+    }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
         E: std::error::Error,
     {
         v.visit_for(self)

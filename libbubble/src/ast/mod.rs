@@ -1,3 +1,4 @@
+mod bindable;
 mod expressions;
 mod location;
 mod printer;
@@ -10,4 +11,5 @@ pub use location::*;
 pub use printer::*;
 pub use statements::*;
 pub use types::*;
-pub use visitor::Visitor;
+pub use visitor::*;
+pub use bindable::*;

@@ -140,7 +140,7 @@ pub enum Token {
     Identifier(String),
     #[regex(r"([0-9]+)?\.[0-9]+", |lex| lex.slice().parse())]
     Real(f64),
-    #[regex(r"[1-9]+[0-9]*", |lex| lex.slice().parse())]
+    #[regex(r"[1-9]+[0-9]*|0", |lex| lex.slice().parse())]
     Integer(i64),
 
     #[error]
@@ -159,7 +159,10 @@ impl<'input> Iterator for Lexer<'input> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.token_stream.next().map(|(token, span)| match token {
-            Token::Error => Err(LexicalError::InvalidToken),
+            Token::Error => {
+                println!("{} {:?} {}", span.start, token, span.end);
+                Err(LexicalError::InvalidToken)
+            }
             _ => Ok((span.start, token, span.end)),
         })
     }

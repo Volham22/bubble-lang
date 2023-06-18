@@ -1,2 +1,2 @@
-mod binder;
+pub mod binder;
 mod utils;

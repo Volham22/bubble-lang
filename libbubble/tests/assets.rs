@@ -4,6 +4,7 @@ use libbubble::{
         grammar::{GlobalStatementsParser, StatementsParser},
         lexer::{Lexer, LexicalError, Token},
     },
+    type_system::binder::*,
 };
 
 pub type StatementsParserResult<T> =
@@ -19,4 +20,10 @@ pub fn parse_global_statements_input(code: &str) -> StatementsParserResult<Vec<G
     let lexer = Lexer::new(code);
     let parser = GlobalStatementsParser::new();
     parser.parse(lexer)
+}
+
+pub fn run_bindings(code: &str) -> Result<(), BinderError> {
+    let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
+    let mut binder = Binder::default();
+    binder.bind_statements(&mut stmts)
 }

@@ -1,9 +1,11 @@
 use super::{
+    bindable::Definition,
     location::{Locatable, TokenLocation},
     visitor::Visitor,
+    MutableVisitor,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     Group(Box<Expression>),
     BinaryOperation(BinaryOperation),
@@ -19,13 +21,22 @@ impl Expression {
     {
         v.visit_expression(self)
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_expression(self)
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Call {
     pub callee: String,
     pub arguments: Vec<Expression>,
     location: TokenLocation,
+    pub(crate) definition: Option<Definition>,
 }
 
 impl Call {
@@ -34,12 +45,21 @@ impl Call {
             callee,
             arguments,
             location: TokenLocation::new(tk_begin, tk_end),
+            definition: None,
         }
     }
 
     pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
     where
         T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_call(self)
+    }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
         E: std::error::Error,
     {
         v.visit_call(self)
@@ -52,7 +72,7 @@ impl Locatable for Call {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BinaryOperation {
     pub left: Box<Expression>,
     pub right: Option<Box<Expression>>,
@@ -83,6 +103,14 @@ impl BinaryOperation {
     {
         v.visit_binary_operation(self)
     }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_binary_operation(self)
+    }
 }
 
 impl Locatable for BinaryOperation {
@@ -91,10 +119,11 @@ impl Locatable for BinaryOperation {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Literal {
     pub literal_type: LiteralType,
     location: TokenLocation,
+    pub(crate) definition: Option<Definition>,
 }
 
 impl Literal {
@@ -102,12 +131,21 @@ impl Literal {
         Self {
             literal_type,
             location: TokenLocation::new(tk_begin, tk_end),
+            definition: None,
         }
     }
 
     pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
     where
         T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_literal(self)
+    }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
         E: std::error::Error,
     {
         v.visit_literal(self)
@@ -120,7 +158,7 @@ impl Locatable for Literal {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LiteralType {
     True,
     False,
@@ -129,7 +167,7 @@ pub enum LiteralType {
     Identifier(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum OpType {
     And,
     Different,
