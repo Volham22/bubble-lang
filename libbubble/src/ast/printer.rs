@@ -247,7 +247,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
             TypeKind::I64 => self.write("i64"),
             TypeKind::String => self.write("string"),
             TypeKind::Bool => self.write("bool"),
-            TypeKind::Identifier(id) => self.write(&id),
+            TypeKind::Identifier(id) => self.write(id),
             TypeKind::Void => self.write("<void>"), // void does not exists
         }
     }

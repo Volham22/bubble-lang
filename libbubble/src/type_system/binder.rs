@@ -35,6 +35,7 @@ pub enum BinderError {
     BadContinue { location: TokenLocation },
 }
 
+#[derive(Default)]
 pub struct Binder {
     functions_statements: HashMap<String, FunctionStatement>,
     struct_statement: HashMap<String, StructStatement>,
@@ -43,20 +44,8 @@ pub struct Binder {
     in_function: bool,
 }
 
-impl Default for Binder {
-    fn default() -> Self {
-        Self {
-            functions_statements: HashMap::new(),
-            struct_statement: HashMap::new(),
-            local_variables: ScopedMap::default(),
-            nested_loop: 0,
-            in_function: false,
-        }
-    }
-}
-
 impl Binder {
-    pub fn bind_statements(&mut self, stmts: &mut Vec<GlobalStatement>) -> Result<(), BinderError> {
+    pub fn bind_statements(&mut self, stmts: &mut [GlobalStatement]) -> Result<(), BinderError> {
         for stmt in stmts.iter_mut() {
             stmt.accept_mut(self)?;
         }
@@ -256,14 +245,14 @@ impl MutableVisitor<BinderError> for Binder {
         match &expr.kind {
             TypeKind::Identifier(name) => {
                 let declaration = self.struct_statement.get(name);
-                if declaration.is_none() {
+                if let Some(dec) = declaration {
+                    expr.set_definition(Definition::Struct(dec.clone()));
+                    Ok(())
+                } else {
                     Err(BinderError::UndeclaredStruct {
                         location: TokenLocation::new(0, 0), // FIXME: Add proper location for type identifier
                         name: name.clone(),
                     })
-                } else {
-                    expr.set_definition(Definition::Struct(declaration.unwrap().clone()));
-                    Ok(())
                 }
             }
             _ => Ok(()),
