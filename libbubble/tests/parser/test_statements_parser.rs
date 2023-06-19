@@ -35,9 +35,7 @@ fn test_valid_statements(#[case] code: &str) {
 #[case::function_with_return_type_with_parameters(
     "function f(a: u32, b: string, c: bool): u32 { 42 }"
 )]
-#[case::function_with_assignment(
-    "function f() { x = true; }"
-)]
+#[case::function_with_assignment("function f() { x = true; }")]
 #[case::function_return_type_no_parameters("function f(): u32 { 42 }")]
 #[case::function_return_type_void_no_parameters("function f(): void { 42 }")]
 #[case::multiple_functions(

@@ -6,10 +6,10 @@ mod statements;
 mod types;
 mod visitor;
 
+pub use bindable::*;
 pub use expressions::*;
 pub use location::*;
 pub use printer::*;
 pub use statements::*;
 pub use types::*;
 pub use visitor::*;
-pub use bindable::*;
