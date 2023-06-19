@@ -10,6 +10,7 @@ use crate::assets::{parse_global_statements_input, parse_statements_input};
 #[case::for_statement("for id = 32; id != 32; id + 2 { 42 }")]
 #[case::for_statement_increment("for id = 0; id != 10; id + 1 { 32; }")]
 #[case::for_statement_with_typename("for id: u32 = 32; id != 32; id + 2 { 42 }")]
+#[case::valid_assignment("a = 2;")]
 fn test_valid_statements(#[case] code: &str) {
     let parser_result = parse_statements_input(code);
     if parser_result.is_err() {
@@ -33,6 +34,9 @@ fn test_valid_statements(#[case] code: &str) {
 #[case::function_with_return_type_with_parameter("function f(a: u32): u32 { 42 }")]
 #[case::function_with_return_type_with_parameters(
     "function f(a: u32, b: string, c: bool): u32 { 42 }"
+)]
+#[case::function_with_assignment(
+    "function f() { x = true; }"
 )]
 #[case::function_return_type_no_parameters("function f(): u32 { 42 }")]
 #[case::function_return_type_void_no_parameters("function f(): void { 42 }")]

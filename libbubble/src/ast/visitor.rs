@@ -1,5 +1,5 @@
 use super::{
-    BinaryOperation, BreakStatement, Call, ContinueStatement, Expression, ForStatement,
+    Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement, Expression, ForStatement,
     FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, Locatable,
     ReturnStatement, Statements, StructStatement, Type, TypeKind, WhileStatement,
 };
@@ -111,6 +111,7 @@ pub trait Visitor<E: std::error::Error> {
             Expression::BinaryOperation(bo) => bo.accept(self),
             Expression::Literal(l) => l.accept(self),
             Expression::Call(c) => c.accept(self),
+            Expression::Assignment(a) => a.accept(self),
         }
     }
 
@@ -141,6 +142,11 @@ pub trait Visitor<E: std::error::Error> {
 
     fn visit_type_kind(&mut self, _: &TypeKind) -> Result<(), E> {
         Ok(())
+    }
+
+    fn visit_assignment(&mut self, expr: &Assignment) -> Result<(), E> {
+        expr.left.accept(self)?;
+        expr.right.accept(self)
     }
 }
 
@@ -243,6 +249,7 @@ pub trait MutableVisitor<E: std::error::Error> {
             Expression::BinaryOperation(bo) => bo.accept_mut(self),
             Expression::Literal(l) => l.accept_mut(self),
             Expression::Call(c) => c.accept_mut(self),
+            Expression::Assignment(a) => a.accept_mut(self),
         }
     }
 
@@ -273,5 +280,10 @@ pub trait MutableVisitor<E: std::error::Error> {
 
     fn visit_type_kind(&mut self, _: &mut TypeKind) -> Result<(), E> {
         Ok(())
+    }
+
+    fn visit_assignment(&mut self, expr: &mut Assignment) -> Result<(), E> {
+        expr.left.accept_mut(self)?;
+        expr.right.accept_mut(self)
     }
 }

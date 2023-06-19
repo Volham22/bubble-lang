@@ -174,7 +174,12 @@ Type: Type = {
 }
 
 Expr: Expression = {
-    <l:@L> <left:Expr> "or" <right:And> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Or, Some(Box::new(right)))),
+    Logic,
+    <l:@L> <left:Logic> "=" <right:Logic> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
+}
+
+Logic: Expression = {
+    <l:@L> <left:Logic> "or" <right:And> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Or, Some(Box::new(right)))),
     And,
 }
 

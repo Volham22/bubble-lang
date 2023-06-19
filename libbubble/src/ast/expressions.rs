@@ -11,6 +11,7 @@ pub enum Expression {
     BinaryOperation(BinaryOperation),
     Literal(Literal),
     Call(Call),
+    Assignment(Assignment),
 }
 
 impl Expression {
@@ -28,6 +29,50 @@ impl Expression {
         E: std::error::Error,
     {
         v.visit_expression(self)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Assignment {
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
+    location: TokenLocation,
+}
+
+impl Assignment {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    ) -> Self {
+        Self {
+            left,
+            right,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+
+    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
+    where
+        T: Visitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_assignment(self)
+    }
+
+    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
+    where
+        T: MutableVisitor<E> + ?Sized,
+        E: std::error::Error,
+    {
+        v.visit_assignment(self)
+    }
+}
+
+impl Locatable for Assignment {
+    fn get_location(&self) -> &TokenLocation {
+        &self.location
     }
 }
 

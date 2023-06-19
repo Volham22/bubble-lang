@@ -1,9 +1,9 @@
 use std::io;
 
 use super::{
-    visitor::Visitor, BinaryOperation, BreakStatement, Call, ContinueStatement, ForStatement,
-    FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, ReturnStatement,
-    StructStatement, Type, TypeKind, WhileStatement,
+    visitor::Visitor, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
+    ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
+    ReturnStatement, StructStatement, Type, TypeKind, WhileStatement,
 };
 
 pub struct Printer<Writer: io::Write> {
@@ -250,5 +250,11 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
             TypeKind::Identifier(id) => self.write(&id),
             TypeKind::Void => self.write("<void>"), // void does not exists
         }
+    }
+
+    fn visit_assignment(&mut self, expr: &Assignment) -> Result<(), io::Error> {
+        expr.left.accept(self)?;
+        self.write(" = ")?;
+        expr.right.accept(self)
     }
 }
