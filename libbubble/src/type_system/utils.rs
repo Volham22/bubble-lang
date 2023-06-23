@@ -198,4 +198,10 @@ mod tests {
         let a = def.find_symbol("a");
         assert!(a.is_none());
     }
+
+    #[test]
+    fn scope_map_not_inserted() {
+        let def: ScopedMap<ast::LetStatement> = ScopedMap::default();
+        assert!(def.find_symbol("var").is_none());
+    }
 }
