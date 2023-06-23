@@ -179,6 +179,7 @@ impl MutableVisitor<BinderError> for Binder {
     }
 
     fn visit_return(&mut self, stmt: &mut ReturnStatement) -> Result<(), BinderError> {
+        stmt.exp.accept_mut(self)?;
         if !self.in_function {
             Err(BinderError::BadReturn {
                 location: stmt.get_location().clone(),
