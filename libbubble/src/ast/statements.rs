@@ -1,3 +1,5 @@
+use crate::type_system;
+
 use super::{
     expressions::Expression,
     location::{Locatable, TokenLocation},
@@ -48,6 +50,7 @@ pub struct FunctionStatement {
     pub return_type: TypeKind,
     pub body: Statements,
     location: TokenLocation,
+    pub(crate) ty: Option<type_system::Type>,
 }
 
 impl FunctionStatement {
@@ -65,6 +68,7 @@ impl FunctionStatement {
             return_type,
             body,
             location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
         }
     }
 
@@ -97,6 +101,7 @@ pub struct LetStatement {
     pub declaration_type: Option<TypeKind>,
     pub init_exp: Box<Expression>,
     location: TokenLocation,
+    pub(crate) ty: Option<type_system::Type>,
 }
 
 impl LetStatement {
@@ -112,6 +117,7 @@ impl LetStatement {
             declaration_type,
             init_exp,
             location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
         }
     }
 
@@ -250,6 +256,7 @@ pub struct StructStatement {
     pub name: String,
     pub fields: Vec<FunctionParameter>,
     location: TokenLocation,
+    pub(crate) ty: Option<type_system::Type>,
 }
 
 impl StructStatement {
@@ -263,6 +270,7 @@ impl StructStatement {
             name,
             fields,
             location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
         }
     }
 
@@ -344,7 +352,7 @@ pub enum StatementKind {
     Return(ReturnStatement),
     Break(BreakStatement),
     Continue(ContinueStatement),
-    Expression(Box<Expression>),
+    Expression { expr: Box<Expression>, naked: bool },
 }
 impl StatementKind {
     pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
@@ -359,7 +367,7 @@ impl StatementKind {
             StatementKind::Return(stmt) => stmt.accept(v),
             StatementKind::Break(stmt) => stmt.accept(v),
             StatementKind::Continue(stmt) => stmt.accept(v),
-            StatementKind::Expression(stmt) => stmt.accept(v),
+            StatementKind::Expression { expr, .. } => expr.accept(v),
             StatementKind::Let(stmt) => stmt.accept(v),
         }
     }
@@ -376,7 +384,7 @@ impl StatementKind {
             StatementKind::Return(stmt) => stmt.accept_mut(v),
             StatementKind::Break(stmt) => stmt.accept_mut(v),
             StatementKind::Continue(stmt) => stmt.accept_mut(v),
-            StatementKind::Expression(stmt) => stmt.accept_mut(v),
+            StatementKind::Expression { expr, .. } => expr.accept_mut(v),
             StatementKind::Let(stmt) => stmt.accept_mut(v),
         }
     }

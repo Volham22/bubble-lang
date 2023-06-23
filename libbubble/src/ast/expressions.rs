@@ -1,3 +1,5 @@
+use crate::type_system;
+
 use super::{
     bindable::Definition,
     location::{Locatable, TokenLocation},
@@ -167,8 +169,9 @@ impl Locatable for BinaryOperation {
 #[derive(Debug, Clone)]
 pub struct Literal {
     pub literal_type: LiteralType,
-    location: TokenLocation,
     pub(crate) definition: Option<Definition>,
+    pub(crate) ty: Option<type_system::Type>,
+    location: TokenLocation,
 }
 
 impl Literal {
@@ -177,6 +180,7 @@ impl Literal {
             literal_type,
             location: TokenLocation::new(tk_begin, tk_end),
             definition: None,
+            ty: None,
         }
     }
 

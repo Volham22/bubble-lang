@@ -84,7 +84,7 @@ pub Statements: Statements = {
                 Statement::new(
                     l,
                     r,
-                    StatementKind::Expression(Box::new(exp))
+                    StatementKind::Expression{ expr: Box::new(exp), naked: true }
                 )
             ]
         )
@@ -92,7 +92,7 @@ pub Statements: Statements = {
 }
 
 Statement: Statement = {
-    <l:@L> <exp:Expr> ";" <r:@R> => Statement::new(l, r, StatementKind::Expression(Box::new(exp))),
+    <l:@L> <exp:Expr> ";" <r:@R> => Statement::new(l, r, StatementKind::Expression{ expr: Box::new(exp), naked: false }),
     <l:@L> <if_stmt:IfStatement> <r:@R> => Statement::new(l, r, StatementKind::If(if_stmt)),
     <l:@L> <while_statement:WhileStatement> <r:@R> => Statement::new(l, r, StatementKind::While(while_statement)),
     <l:@L> <for_statement:ForStatement> <r:@R> => Statement::new(l, r, StatementKind::For(for_statement)),
