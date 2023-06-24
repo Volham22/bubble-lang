@@ -1,4 +1,4 @@
-use crate::parser::assets::parse_statements_input;
+use crate::assets::parse_statements_input;
 
 use rstest::rstest;
 

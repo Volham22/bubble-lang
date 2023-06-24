@@ -84,7 +84,7 @@ pub Statements: Statements = {
                 Statement::new(
                     l,
                     r,
-                    StatementKind::Expression(Box::new(exp))
+                    StatementKind::Expression{ expr: Box::new(exp), naked: true }
                 )
             ]
         )
@@ -92,7 +92,7 @@ pub Statements: Statements = {
 }
 
 Statement: Statement = {
-    <l:@L> <exp:Expr> ";" <r:@R> => Statement::new(l, r, StatementKind::Expression(Box::new(exp))),
+    <l:@L> <exp:Expr> ";" <r:@R> => Statement::new(l, r, StatementKind::Expression{ expr: Box::new(exp), naked: false }),
     <l:@L> <if_stmt:IfStatement> <r:@R> => Statement::new(l, r, StatementKind::If(if_stmt)),
     <l:@L> <while_statement:WhileStatement> <r:@R> => Statement::new(l, r, StatementKind::While(while_statement)),
     <l:@L> <for_statement:ForStatement> <r:@R> => Statement::new(l, r, StatementKind::For(for_statement)),
@@ -137,9 +137,7 @@ ForStatement: ForStatement = {
         ForStatement::new(
             l,
             r,
-            val,
-            Box::new(init_expr),
-            None,
+            LetStatement::new(l, r, val, None, Box::new(init_expr)),
             Box::new(continue_expr),
             Box::new(modify_expr),
             Box::new(stmts),
@@ -149,9 +147,7 @@ ForStatement: ForStatement = {
         ForStatement::new(
             l,
             r,
-            val,
-            Box::new(init_expr),
-            Some(typename),
+            LetStatement::new(l, r, val, Some(typename.kind), Box::new(init_expr)),
             Box::new(continue_expr),
             Box::new(modify_expr),
             Box::new(stmts),
@@ -174,7 +170,12 @@ Type: Type = {
 }
 
 Expr: Expression = {
-    <l:@L> <left:Expr> "or" <right:And> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Or, Some(Box::new(right)))),
+    Logic,
+    <l:@L> <left:Logic> "=" <right:Logic> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
+}
+
+Logic: Expression = {
+    <l:@L> <left:Logic> "or" <right:And> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(left), OpType::Or, Some(Box::new(right)))),
     And,
 }
 

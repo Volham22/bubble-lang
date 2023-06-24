@@ -354,6 +354,7 @@ dependencies = [
  "logos",
  "regex",
  "rstest",
+ "thiserror",
 ]
 
 [[package]]

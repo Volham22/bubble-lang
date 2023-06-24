@@ -85,6 +85,7 @@ use rstest::rstest;
     ]
 )]
 #[case::float_literal("12.3", &[ Token::Real(12.3)])]
+#[case::zero_integer("0", &[ Token::Integer(0)])]
 fn test_code_lexing(#[case] source_code: &str, #[case] expected: &[Token]) {
     let lexer = Token::lexer(source_code);
     let tokens: Vec<Token> = lexer.collect();

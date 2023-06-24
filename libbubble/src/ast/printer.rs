@@ -1,9 +1,9 @@
 use std::io;
 
 use super::{
-    visitor::Visitor, BinaryOperation, BreakStatement, Call, ContinueStatement, ForStatement,
-    FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, ReturnStatement,
-    StructStatement, TypeKind, WhileStatement,
+    visitor::Visitor, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
+    ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
+    ReturnStatement, StructStatement, Type, TypeKind, WhileStatement,
 };
 
 pub struct Printer<Writer: io::Write> {
@@ -149,15 +149,15 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
 
     fn visit_for(&mut self, stmt: &ForStatement) -> PrinterResult {
         self.write("for ")?;
-        self.write(&stmt.init_identifier)?;
+        self.write(&stmt.init_decl.name)?;
 
-        if let Some(ty) = &stmt.init_type {
+        if let Some(ty) = &stmt.init_decl.declaration_type {
             self.write(": ")?;
-            ty.kind.accept(self)?;
+            ty.accept(self)?;
         }
 
         self.write(" = ")?;
-        stmt.init_expression.accept(self)?;
+        stmt.init_decl.accept(self)?;
         self.write("; ")?;
         stmt.continue_expression.accept(self)?;
         self.write("; ")?;
@@ -235,8 +235,8 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
         Ok(())
     }
 
-    fn visit_type_kind(&mut self, ty: &TypeKind) -> PrinterResult {
-        match ty {
+    fn visit_type(&mut self, ty: &Type) -> PrinterResult {
+        match &ty.kind {
             TypeKind::U8 => self.write("u8"),
             TypeKind::U16 => self.write("u16"),
             TypeKind::U32 => self.write("u32"),
@@ -245,10 +245,17 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
             TypeKind::I16 => self.write("i16"),
             TypeKind::I32 => self.write("i32"),
             TypeKind::I64 => self.write("i64"),
+            TypeKind::Float => self.write("float"),
             TypeKind::String => self.write("string"),
             TypeKind::Bool => self.write("bool"),
             TypeKind::Identifier(id) => self.write(id),
             TypeKind::Void => self.write("<void>"), // void does not exists
         }
+    }
+
+    fn visit_assignment(&mut self, expr: &Assignment) -> Result<(), io::Error> {
+        expr.left.accept(self)?;
+        self.write(" = ")?;
+        expr.right.accept(self)
     }
 }
