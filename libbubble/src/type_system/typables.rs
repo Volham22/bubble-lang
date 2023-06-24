@@ -12,6 +12,10 @@ pub enum Type {
     I16,
     I32,
     I64,
+    /// This type is for int literal and is supposed to be compatible with any
+    /// integer like type (signed and unsigned).
+    /// It is only used internaly in the ast.
+    Int,
     Float,
     String,
     Bool,
@@ -30,7 +34,25 @@ impl Type {
     pub fn is_compatible_with(&self, other: &Type) -> bool {
         matches!(
             (self, other),
-            (Type::U8, Type::U8)
+            // `Int` must be compatible with itself to allow stuff like 1 + 1
+            (Type::Int, Type::Int)
+                | (Type::Int, Type::U8)
+                | (Type::Int, Type::U16)
+                | (Type::Int, Type::U32)
+                | (Type::Int, Type::U64)
+                | (Type::Int, Type::I8)
+                | (Type::Int, Type::I16)
+                | (Type::Int, Type::I32)
+                | (Type::Int, Type::I64)
+                | (Type::U8, Type::Int)
+                | (Type::U16, Type::Int)
+                | (Type::U32, Type::Int)
+                | (Type::U64, Type::Int)
+                | (Type::I8, Type::Int)
+                | (Type::I16, Type::Int)
+                | (Type::I32, Type::Int)
+                | (Type::I64, Type::Int)
+                | (Type::U8, Type::U8)
                 | (Type::U16, Type::U16)
                 | (Type::U32, Type::U32)
                 | (Type::U64, Type::U64)
@@ -55,6 +77,7 @@ impl Type {
                 | Type::I16
                 | Type::I32
                 | Type::I64
+                | Type::Int
         )
     }
 }

@@ -2,8 +2,8 @@ use thiserror::Error;
 
 use crate::ast::{
     Assignment, BinaryOperation, Bindable, Call, Definition, Expression, ForStatement,
-    FunctionStatement, IfStatement, LetStatement, Literal, LiteralType, MutableVisitor, OpType,
-    Statements, StructStatement, WhileStatement,
+    FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType,
+    MutableVisitor, OpType, ReturnStatement, Statements, StructStatement, WhileStatement,
 };
 
 use super::{Typable, Type};
@@ -32,8 +32,41 @@ pub enum TypeCheckerError {
         left_ty: Type,
         right_ty: Type,
     },
-    #[error("Typename {0} does not name a structure!")]
-    TypenameNotStructure(String),
+    #[error("Function return type is {expected:?} but a {got:?} type is returned")]
+    ReturnTypeMismatch { got: Type, expected: Type },
+}
+
+impl PartialEq for TypeCheckerError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (
+                TypeCheckerError::BadInit { .. },
+                TypeCheckerError::BadInit { .. }
+            ) | (
+                TypeCheckerError::NonBoolCondition(_),
+                TypeCheckerError::NonBoolCondition(_)
+            ) | (
+                TypeCheckerError::BadAssigment { .. },
+                TypeCheckerError::BadAssigment { .. }
+            ) | (
+                TypeCheckerError::NotCallable(_),
+                TypeCheckerError::NotCallable(_)
+            ) | (
+                TypeCheckerError::BadParameterCount { .. },
+                TypeCheckerError::BadParameterCount { .. },
+            ) | (
+                TypeCheckerError::BadParameter { .. },
+                TypeCheckerError::BadParameter { .. }
+            ) | (
+                TypeCheckerError::IncompatibleOperationType { .. },
+                TypeCheckerError::IncompatibleOperationType { .. },
+            ) | (
+                TypeCheckerError::ReturnTypeMismatch { .. },
+                TypeCheckerError::ReturnTypeMismatch { .. },
+            )
+        )
+    }
 }
 
 #[derive(Default)]
@@ -43,6 +76,19 @@ pub struct TypeChecker {
 }
 
 impl TypeChecker {
+    pub fn check_statements(
+        &mut self,
+        stmts: &mut [GlobalStatement],
+    ) -> Result<(), TypeCheckerError> {
+        for stmt in stmts.iter_mut() {
+            stmt.accept_mut(self)?;
+            self.current_type = None;
+            self.current_function = None;
+        }
+
+        Ok(())
+    }
+
     fn visit_statements(&mut self, stmts: &mut Statements) -> Result<(), TypeCheckerError> {
         for stmt in stmts.statements.iter_mut() {
             stmt.kind.accept_mut(self)?;
@@ -87,6 +133,32 @@ impl MutableVisitor<TypeCheckerError> for TypeChecker {
 
         self.current_function = None;
         Ok(())
+    }
+
+    fn visit_return(&mut self, stmt: &mut ReturnStatement) -> Result<(), TypeCheckerError> {
+        stmt.exp.accept_mut(self)?;
+
+        match self
+            .current_function
+            .as_ref()
+            .expect("return outside a function")
+        {
+            Type::Function { return_type, .. } => {
+                if !return_type.is_compatible_with(
+                    self.current_type
+                        .as_ref()
+                        .expect("return expression has no type"),
+                ) {
+                    Err(TypeCheckerError::ReturnTypeMismatch {
+                        got: self.current_type.clone().unwrap(),
+                        expected: return_type.as_ref().clone(),
+                    })
+                } else {
+                    Ok(())
+                }
+            }
+            _ => unreachable!("current function type is not a function!"),
+        }
     }
 
     fn visit_struct(&mut self, stmt: &mut StructStatement) -> Result<(), TypeCheckerError> {
@@ -234,6 +306,7 @@ impl MutableVisitor<TypeCheckerError> for TypeChecker {
                     .current_type
                     .clone()
                     .expect("No Left type in binary operation!");
+                println!("{left_ty:?} {:?}", expr.left);
 
                 right_exp.accept_mut(self)?;
 
@@ -259,9 +332,9 @@ impl MutableVisitor<TypeCheckerError> for TypeChecker {
                         | OpType::Divide
                         | OpType::Modulo
                 ) {
-                    self.current_type = Some(Type::Bool);
-                } else {
                     self.current_type = Some(right_ty.clone());
+                } else {
+                    self.current_type = Some(Type::Bool);
                 }
 
                 Ok(())
@@ -290,20 +363,29 @@ impl MutableVisitor<TypeCheckerError> for TypeChecker {
                 Ok(())
             }
             LiteralType::Integer(_) => {
-                self.current_type = Some(Type::I32);
+                self.current_type = Some(Type::Int);
                 Ok(())
             }
             LiteralType::Float(_) => {
                 self.current_type = Some(Type::Float);
                 Ok(())
             }
-            LiteralType::Identifier(ref id) => {
-                // FIXME: This is ugly and should not be written this way.
-                if let Definition::Struct(mut strct) = literal.get_definition().clone() {
-                    strct.accept_mut(self)?;
-                    Ok(())
-                } else {
-                    Err(TypeCheckerError::TypenameNotStructure(id.to_string()))
+            LiteralType::Identifier(_) => {
+                // FIXME: This is ugly and should not be written this way. We're
+                // cloning here to trick the borrow checker and do mutable accept
+                match literal.get_definition().clone() {
+                    Definition::Struct(mut strct) => {
+                        strct.accept_mut(self)?; // current_type will be set to struct properly
+                        Ok(())
+                    }
+                    Definition::LocalVariable(mut v) => {
+                        v.accept_mut(self)?;
+                        Ok(())
+                    }
+                    Definition::Function(mut f) => {
+                        f.accept_mut(self)?;
+                        Ok(())
+                    }
                 }
             }
         }

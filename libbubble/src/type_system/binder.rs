@@ -196,13 +196,15 @@ impl MutableVisitor<BinderError> for Binder {
 
     fn visit_literal(&mut self, expr: &mut Literal) -> Result<(), BinderError> {
         if let LiteralType::Identifier(name) = &expr.literal_type {
-            if self.local_variables.find_symbol(name).is_none() {
-                Err(BinderError::UndeclaredVariable {
+            match self.local_variables.find_symbol(name) {
+                Some(var) => {
+                    expr.set_definition(Definition::LocalVariable(var.clone()));
+                    Ok(())
+                }
+                None => Err(BinderError::UndeclaredVariable {
                     location: expr.get_location().clone(),
                     name: name.clone(),
-                })
-            } else {
-                Ok(())
+                }),
             }
         } else {
             Ok(())

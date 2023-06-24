@@ -135,6 +135,14 @@ fn test_binding_good(#[case] code: &str) {
     }
 "#
 )]
+#[case::local_variable_not_callable(
+    r#"
+       function f() {
+           let a = 2;
+           a();
+       }
+   "#
+)]
 fn test_binding_bad(#[case] code: &str) {
     assert!(run_bindings(code).is_err());
 }

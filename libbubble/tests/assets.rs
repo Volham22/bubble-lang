@@ -4,7 +4,10 @@ use libbubble::{
         grammar::{GlobalStatementsParser, StatementsParser},
         lexer::{Lexer, LexicalError, Token},
     },
-    type_system::binder::*,
+    type_system::{
+        binder::*,
+        type_checker::{TypeChecker, TypeCheckerError},
+    },
 };
 
 pub type StatementsParserResult<T> =
@@ -26,4 +29,12 @@ pub fn run_bindings(code: &str) -> Result<(), BinderError> {
     let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
     let mut binder = Binder::default();
     binder.bind_statements(&mut stmts)
+}
+
+pub fn run_type_checker(code: &str) -> Result<(), TypeCheckerError> {
+    let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
+    let mut binder = Binder::default();
+    let mut type_checker = TypeChecker::default();
+    binder.bind_statements(&mut stmts).expect("Binder failed");
+    type_checker.check_statements(&mut stmts)
 }
