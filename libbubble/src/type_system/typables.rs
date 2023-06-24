@@ -1,4 +1,4 @@
-use crate::ast::{FunctionStatement, LetStatement, Literal, StructStatement};
+use crate::ast::{self, FunctionStatement, LetStatement, Literal, StructStatement};
 
 pub type FunctionParameter = (Type, String);
 
@@ -12,14 +12,74 @@ pub enum Type {
     I16,
     I32,
     I64,
+    Float,
     String,
     Bool,
-    Struct(String),
+    Struct {
+        name: String,
+        fields: Vec<FunctionParameter>,
+    },
     Function {
         parameters: Vec<FunctionParameter>,
         return_type: Box<Type>,
     },
     Void,
+}
+
+impl Type {
+    pub fn is_compatible_with(&self, other: &Type) -> bool {
+        matches!(
+            (self, other),
+            (Type::U8, Type::U8)
+                | (Type::U16, Type::U16)
+                | (Type::U32, Type::U32)
+                | (Type::U64, Type::U64)
+                | (Type::I8, Type::I8)
+                | (Type::I16, Type::I16)
+                | (Type::I32, Type::I32)
+                | (Type::I64, Type::I64)
+                | (Type::Bool, Type::Bool)
+                | (Type::Void, Type::Void)
+                | (Type::String, Type::String)
+        )
+    }
+
+    pub fn is_integer(&self) -> bool {
+        matches!(
+            self,
+            Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64
+                | Type::I8
+                | Type::I16
+                | Type::I32
+                | Type::I64
+        )
+    }
+}
+
+impl From<ast::TypeKind> for Type {
+    fn from(value: ast::TypeKind) -> Self {
+        match value {
+            ast::TypeKind::U8 => Type::U8,
+            ast::TypeKind::U16 => Type::U16,
+            ast::TypeKind::U32 => Type::U32,
+            ast::TypeKind::U64 => Type::U64,
+            ast::TypeKind::I8 => Type::I8,
+            ast::TypeKind::I16 => Type::I16,
+            ast::TypeKind::I32 => Type::I32,
+            ast::TypeKind::I64 => Type::I64,
+            ast::TypeKind::String => Type::String,
+            ast::TypeKind::Bool => Type::Bool,
+            ast::TypeKind::Float => Type::Float,
+            ast::TypeKind::Identifier(name) => Type::Struct {
+                name,
+                fields: Vec::new(),
+            },
+            ast::TypeKind::Void => Type::Void,
+        }
+    }
 }
 
 pub trait Typable {

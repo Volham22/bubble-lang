@@ -149,23 +149,8 @@ impl MutableVisitor<BinderError> for Binder {
     }
 
     fn visit_for(&mut self, stmt: &mut ForStatement) -> Result<(), BinderError> {
-        stmt.init_expression.accept_mut(self)?;
-
-        if let Some(ty) = &mut stmt.init_type {
-            ty.kind.accept_mut(self)?;
-        }
-
         self.begin_loop();
-        self.local_variables.insert_symbol(
-            &stmt.init_identifier,
-            LetStatement::new(
-                stmt.get_location().begin,
-                stmt.get_location().end,
-                stmt.init_identifier.clone(),
-                stmt.init_type.clone().map(|t| t.kind),
-                stmt.init_expression.clone(),
-            ),
-        );
+        stmt.init_decl.accept_mut(self)?;
 
         stmt.modify_expression.accept_mut(self)?;
         stmt.continue_expression.accept_mut(self)?;

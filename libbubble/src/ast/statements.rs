@@ -3,7 +3,6 @@ use crate::type_system;
 use super::{
     expressions::Expression,
     location::{Locatable, TokenLocation},
-    types::Type,
     visitor::Visitor,
     MutableVisitor, TypeKind,
 };
@@ -483,9 +482,7 @@ impl Locatable for WhileStatement {
 
 #[derive(Debug, Clone)]
 pub struct ForStatement {
-    pub init_identifier: String,
-    pub init_expression: Box<Expression>,
-    pub init_type: Option<Type>,
+    pub init_decl: LetStatement,
     pub continue_expression: Box<Expression>,
     pub modify_expression: Box<Expression>,
     pub body: Box<Statements>,
@@ -497,17 +494,13 @@ impl ForStatement {
     pub fn new(
         tk_begin: usize,
         tk_end: usize,
-        init_identifier: String,
-        init_expression: Box<Expression>,
-        init_type: Option<Type>,
+        init_decl: LetStatement,
         continue_expression: Box<Expression>,
         modify_expression: Box<Expression>,
         body: Box<Statements>,
     ) -> Self {
         Self {
-            init_identifier,
-            init_expression,
-            init_type,
+            init_decl,
             continue_expression,
             modify_expression,
             body,

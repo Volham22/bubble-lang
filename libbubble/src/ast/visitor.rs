@@ -77,11 +77,7 @@ pub trait Visitor<E: std::error::Error> {
     }
 
     fn visit_for(&mut self, stmt: &ForStatement) -> Result<(), E> {
-        stmt.init_expression.accept(self)?;
-
-        if let Some(ty) = &stmt.init_type {
-            ty.accept(self)?;
-        }
+        stmt.init_decl.accept(self)?;
 
         stmt.modify_expression.accept(self)?;
         stmt.continue_expression.accept(self)?;
@@ -211,15 +207,12 @@ pub trait MutableVisitor<E: std::error::Error> {
         for while_stmt in &mut stmt.body.statements {
             while_stmt.kind.accept_mut(self)?;
         }
+
         Ok(())
     }
 
     fn visit_for(&mut self, stmt: &mut ForStatement) -> Result<(), E> {
-        stmt.init_expression.accept_mut(self)?;
-
-        if let Some(ty) = &mut stmt.init_type {
-            ty.kind.accept_mut(self)?;
-        }
+        stmt.init_decl.accept_mut(self)?;
 
         stmt.modify_expression.accept_mut(self)?;
         stmt.continue_expression.accept_mut(self)?;

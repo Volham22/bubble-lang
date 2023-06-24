@@ -216,7 +216,7 @@ pub enum LiteralType {
     Identifier(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum OpType {
     And,
     Different,

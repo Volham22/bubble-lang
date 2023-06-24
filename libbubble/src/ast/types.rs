@@ -56,6 +56,7 @@ pub enum TypeKind {
     I64,
     String,
     Bool,
+    Float,
     Identifier(String),
     Void,
 }

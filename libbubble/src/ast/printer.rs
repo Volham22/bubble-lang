@@ -149,15 +149,15 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
 
     fn visit_for(&mut self, stmt: &ForStatement) -> PrinterResult {
         self.write("for ")?;
-        self.write(&stmt.init_identifier)?;
+        self.write(&stmt.init_decl.name)?;
 
-        if let Some(ty) = &stmt.init_type {
+        if let Some(ty) = &stmt.init_decl.declaration_type {
             self.write(": ")?;
-            ty.kind.accept(self)?;
+            ty.accept(self)?;
         }
 
         self.write(" = ")?;
-        stmt.init_expression.accept(self)?;
+        stmt.init_decl.accept(self)?;
         self.write("; ")?;
         stmt.continue_expression.accept(self)?;
         self.write("; ")?;
@@ -245,6 +245,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
             TypeKind::I16 => self.write("i16"),
             TypeKind::I32 => self.write("i32"),
             TypeKind::I64 => self.write("i64"),
+            TypeKind::Float => self.write("float"),
             TypeKind::String => self.write("string"),
             TypeKind::Bool => self.write("bool"),
             TypeKind::Identifier(id) => self.write(id),

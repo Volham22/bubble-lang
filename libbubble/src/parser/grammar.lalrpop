@@ -137,9 +137,7 @@ ForStatement: ForStatement = {
         ForStatement::new(
             l,
             r,
-            val,
-            Box::new(init_expr),
-            None,
+            LetStatement::new(l, r, val, None, Box::new(init_expr)),
             Box::new(continue_expr),
             Box::new(modify_expr),
             Box::new(stmts),
@@ -149,9 +147,7 @@ ForStatement: ForStatement = {
         ForStatement::new(
             l,
             r,
-            val,
-            Box::new(init_expr),
-            Some(typename),
+            LetStatement::new(l, r, val, Some(typename.kind), Box::new(init_expr)),
             Box::new(continue_expr),
             Box::new(modify_expr),
             Box::new(stmts),
