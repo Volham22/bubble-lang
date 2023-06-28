@@ -200,6 +200,15 @@ fn type_checker_valid(#[case] code: &str) {
    "#,
     TypeCheckerError::ReturnTypeMismatch { got: type_system::Type::Int, expected: type_system::Type::Void }
 )]
+#[case::wrong_int_type_return(
+    r#"
+       function f(): i32 {
+           let a: u32 = 42;
+           return a;
+       }
+   "#,
+    TypeCheckerError::ReturnTypeMismatch { got: type_system::Type::U32, expected: type_system::Type::I32 }
+)]
 #[case::return_type_mismatch(
     r#"
        function f(): float {
