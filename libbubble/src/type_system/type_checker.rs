@@ -154,6 +154,11 @@ impl MutableVisitor<TypeCheckerError> for TypeChecker {
                         expected: return_type.as_ref().clone(),
                     })
                 } else {
+                    println!(
+                        "{:?} compatible with {:?}",
+                        return_type,
+                        self.current_type.clone().unwrap()
+                    );
                     Ok(())
                 }
             }
@@ -184,13 +189,14 @@ impl MutableVisitor<TypeCheckerError> for TypeChecker {
                 if !real_type
                     .is_compatible_with(self.current_type.as_ref().expect("let init has no type"))
                 {
-                    stmt.set_type(real_type.clone());
-
                     return Err(TypeCheckerError::BadInit {
                         left: real_type,
                         right: self.current_type.clone().unwrap(),
                     });
                 }
+
+                stmt.set_type(real_type.clone());
+                self.current_type = Some(real_type);
             }
             // Infer the variable type with the right hand side expression type
             None => {
