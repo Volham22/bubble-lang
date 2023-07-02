@@ -57,7 +57,7 @@ impl<T: io::Write> Printer<T> {
     }
 }
 
-impl<T: io::Write> Visitor<io::Error> for Printer<T> {
+impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
     fn visit_function(&mut self, stmt: &FunctionStatement) -> PrinterResult {
         self.write("function ")?;
         self.write(&stmt.name)?;
@@ -66,18 +66,16 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
         for (kind, name) in &stmt.parameters {
             self.write(name)?;
             self.write(":")?;
-            kind.accept(self)?;
+            self.visit_type_kind(kind)?;
             self.write(", ")?;
         }
         self.write("): ")?;
 
-        stmt.return_type.accept(self)?;
+        self.visit_type_kind(&stmt.return_type)?;
         self.write(" {")?;
         self.indent_and_newline()?;
 
-        for stmt in &stmt.body.statements {
-            stmt.kind.accept(self)?;
-        }
+        self.visit_statements_vec(&stmt.body.statements)?;
 
         self.dec_indent_and_newline()?;
         self.write("}\n")?;
@@ -91,7 +89,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
 
         for (kind, name) in &stmt.fields {
             self.write(&format!("{}: ", name))?;
-            kind.accept(self)?;
+            self.visit_type_kind(kind)?;
             self.write(",\n")?;
         }
 
@@ -103,12 +101,12 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
         self.write("let ")?;
         self.write(&stmt.name)?;
 
-        if let Some(ty) = &stmt.declaration_type {
-            ty.accept(self)?;
+        if let Some(ref ty) = stmt.declaration_type {
+            self.visit_type_kind(ty)?;
         }
 
         self.write(" = ")?;
-        stmt.init_exp.accept(self)?;
+        self.visit_expression(&stmt.init_exp)?;
         self.write(";\n")?;
 
         Ok(())
@@ -116,7 +114,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
 
     fn visit_if(&mut self, stmt: &IfStatement) -> PrinterResult {
         self.write("if ")?;
-        stmt.condition.accept(self)?;
+        self.visit_expression(&stmt.condition)?;
         self.write("{")?;
         self.indent_and_newline()?;
         self.visit_statements(&stmt.then_clause)?;
@@ -136,7 +134,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
 
     fn visit_while(&mut self, stmt: &WhileStatement) -> PrinterResult {
         self.write("while ")?;
-        stmt.condition.accept(self)?;
+        self.visit_expression(&stmt.condition)?;
 
         self.write(" {")?;
         self.indent_and_newline()?;
@@ -151,17 +149,17 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
         self.write("for ")?;
         self.write(&stmt.init_decl.name)?;
 
-        if let Some(ty) = &stmt.init_decl.declaration_type {
+        if let Some(ref ty) = stmt.init_decl.declaration_type {
             self.write(": ")?;
-            ty.accept(self)?;
+            self.visit_type_kind(ty)?;
         }
 
         self.write(" = ")?;
-        stmt.init_decl.accept(self)?;
+        self.visit_let(&stmt.init_decl)?;
         self.write("; ")?;
-        stmt.continue_expression.accept(self)?;
+        self.visit_expression(&stmt.continue_expression)?;
         self.write("; ")?;
-        stmt.modify_expression.accept(self)?;
+        self.visit_expression(&stmt.modify_expression)?;
 
         self.write("{")?;
         self.indent_and_newline()?;
@@ -174,7 +172,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
 
     fn visit_return(&mut self, stmt: &ReturnStatement) -> PrinterResult {
         self.write("return ")?;
-        stmt.exp.accept(self)?;
+        self.visit_expression(&stmt.exp)?;
         self.write(";")
     }
 
@@ -187,7 +185,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
     }
 
     fn visit_binary_operation(&mut self, expr: &BinaryOperation) -> PrinterResult {
-        expr.left.accept(self)?;
+        self.visit_expression(&expr.left)?;
 
         match expr.op {
             super::OpType::And => self.write("and"),
@@ -207,7 +205,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
         }?;
 
         if let Some(right) = &expr.right {
-            right.accept(self)
+            self.visit_expression(right)
         } else {
             Ok(())
         }
@@ -228,7 +226,7 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
         self.write("(")?;
 
         for arg in &expr.arguments {
-            arg.accept(self)?;
+            self.visit_expression(arg)?;
             self.write(", ")?;
         }
 
@@ -254,8 +252,8 @@ impl<T: io::Write> Visitor<io::Error> for Printer<T> {
     }
 
     fn visit_assignment(&mut self, expr: &Assignment) -> Result<(), io::Error> {
-        expr.left.accept(self)?;
+        self.visit_expression(&expr.left)?;
         self.write(" = ")?;
-        expr.right.accept(self)
+        self.visit_expression(&expr.right)
     }
 }

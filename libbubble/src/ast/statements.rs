@@ -3,7 +3,6 @@ use crate::type_system;
 use super::{
     expressions::Expression,
     location::{Locatable, TokenLocation},
-    visitor::Visitor,
     MutableVisitor, TypeKind,
 };
 
@@ -15,18 +14,6 @@ pub enum GlobalStatement {
 }
 
 impl GlobalStatement {
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        E: std::error::Error,
-        T: Visitor<E> + ?Sized,
-    {
-        match self {
-            GlobalStatement::Function(f) => v.visit_function(f),
-            GlobalStatement::Struct(s) => v.visit_struct(s),
-            GlobalStatement::Let(l) => v.visit_let(l),
-        }
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         E: std::error::Error,
@@ -71,14 +58,6 @@ impl FunctionStatement {
         }
     }
 
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        E: std::error::Error,
-        T: Visitor<E> + ?Sized,
-    {
-        v.visit_function(self)
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         E: std::error::Error,
@@ -120,14 +99,6 @@ impl LetStatement {
         }
     }
 
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        E: std::error::Error,
-        T: Visitor<E> + ?Sized,
-    {
-        v.visit_let(self)
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         E: std::error::Error,
@@ -157,14 +128,6 @@ impl ReturnStatement {
         }
     }
 
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_return(self)
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         T: MutableVisitor<E> + ?Sized,
@@ -192,14 +155,6 @@ impl BreakStatement {
         }
     }
 
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_break(self)
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         T: MutableVisitor<E> + ?Sized,
@@ -225,14 +180,6 @@ impl ContinueStatement {
         Self {
             location: TokenLocation::new(tk_begin, tk_end),
         }
-    }
-
-    pub fn accept<E, T>(&self, v: &mut T) -> Result<(), E>
-    where
-        E: std::error::Error,
-        T: Visitor<E> + ?Sized,
-    {
-        v.visit_continue(self)
     }
 
     pub fn accept_mut<E, T>(&mut self, v: &mut T) -> Result<(), E>
@@ -271,14 +218,6 @@ impl StructStatement {
             location: TokenLocation::new(tk_begin, tk_end),
             ty: None,
         }
-    }
-
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_struct(self)
     }
 
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
@@ -354,23 +293,6 @@ pub enum StatementKind {
     Expression { expr: Box<Expression>, naked: bool },
 }
 impl StatementKind {
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        match self {
-            StatementKind::If(stmt) => stmt.accept(v),
-            StatementKind::While(stmt) => stmt.accept(v),
-            StatementKind::For(stmt) => stmt.accept(v),
-            StatementKind::Return(stmt) => stmt.accept(v),
-            StatementKind::Break(stmt) => stmt.accept(v),
-            StatementKind::Continue(stmt) => stmt.accept(v),
-            StatementKind::Expression { expr, .. } => expr.accept(v),
-            StatementKind::Let(stmt) => stmt.accept(v),
-        }
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         T: MutableVisitor<E> + ?Sized,
@@ -413,14 +335,6 @@ impl IfStatement {
         }
     }
 
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_if(self)
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         T: MutableVisitor<E> + ?Sized,
@@ -455,14 +369,6 @@ impl WhileStatement {
             body,
             location: TokenLocation::new(tk_begin, tk_end),
         }
-    }
-
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_while(self)
     }
 
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
@@ -506,14 +412,6 @@ impl ForStatement {
             body,
             location: TokenLocation::new(tk_begin, tk_end),
         }
-    }
-
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_for(self)
     }
 
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>

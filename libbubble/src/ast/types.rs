@@ -1,7 +1,6 @@
 use super::{
     bindable::Definition,
     location::{Locatable, TokenLocation},
-    visitor::Visitor,
     MutableVisitor,
 };
 
@@ -19,14 +18,6 @@ impl Type {
             location: TokenLocation::new(tk_begin, tk_end),
             definition: None,
         }
-    }
-
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_type(self)
     }
 
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
@@ -62,14 +53,6 @@ pub enum TypeKind {
 }
 
 impl TypeKind {
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_type_kind(self)
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         T: MutableVisitor<E> + ?Sized,
