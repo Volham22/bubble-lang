@@ -25,12 +25,6 @@ pub fn parse_global_statements_input(code: &str) -> StatementsParserResult<Vec<G
     parser.parse(lexer)
 }
 
-pub fn run_bindings(code: &str) -> Result<(), BinderError> {
-    let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
-    let mut binder = Binder::default();
-    binder.bind_statements(&mut stmts)
-}
-
 pub fn run_type_checker(code: &str) -> Result<(), TypeCheckerError> {
     let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
     let mut binder = Binder::default();

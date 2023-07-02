@@ -145,137 +145,150 @@ pub trait Visitor<'ast, E: std::error::Error> {
     }
 }
 
-pub trait MutableVisitor<E: std::error::Error> {
-    fn visit_global_statement(&mut self, stmt: &mut GlobalStatement) -> Result<(), E> {
+pub trait MutableVisitor<'ast, E: std::error::Error> {
+    fn visit_global_statement(&mut self, stmt: &'ast mut GlobalStatement) -> Result<(), E> {
         match stmt {
-            GlobalStatement::Function(f) => f.accept_mut(self),
-            GlobalStatement::Struct(s) => s.accept_mut(self),
-            GlobalStatement::Let(l) => l.accept_mut(self),
+            GlobalStatement::Function(f) => self.visit_function(f),
+            GlobalStatement::Struct(s) => self.visit_struct(s),
+            GlobalStatement::Let(l) => self.visit_let(l),
         }
     }
 
-    fn visit_function(&mut self, stmt: &mut FunctionStatement) -> Result<(), E> {
+    fn visit_statement_kind(&mut self, stmt: &'ast mut StatementKind) -> Result<(), E> {
+        match stmt {
+            super::StatementKind::If(s) => self.visit_if(s),
+            super::StatementKind::Let(s) => self.visit_let(s),
+            super::StatementKind::While(s) => self.visit_while(s),
+            super::StatementKind::For(s) => self.visit_for(s),
+            super::StatementKind::Return(s) => self.visit_return(s),
+            super::StatementKind::Break(s) => self.visit_break(s),
+            super::StatementKind::Continue(s) => self.visit_continue(s),
+            super::StatementKind::Expression { expr, .. } => self.visit_expression(expr),
+        }
+    }
+
+    fn visit_statements_vec(&mut self, stmts: &'ast mut [Statement]) -> Result<(), E> {
+        for stmt in stmts {
+            self.visit_statement_kind(&mut stmt.kind)?;
+        }
+
+        Ok(())
+    }
+
+    fn visit_function(&mut self, stmt: &'ast mut FunctionStatement) -> Result<(), E> {
         for stmt in &mut stmt.body.statements {
-            stmt.kind.accept_mut(self)?;
+            self.visit_statement_kind(&mut stmt.kind)?;
         }
 
         Ok(())
     }
 
-    fn visit_struct(&mut self, stmt: &mut StructStatement) -> Result<(), E> {
+    fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), E> {
         for (kind, _) in &mut stmt.fields {
-            kind.accept_mut(self)?;
+            self.visit_type_kind(kind)?;
         }
         Ok(())
     }
 
-    fn visit_let(&mut self, stmt: &mut LetStatement) -> Result<(), E> {
+    fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), E> {
         if let Some(dec_ty) = &mut stmt.declaration_type {
-            dec_ty.accept_mut(self)?;
+            self.visit_type_kind(dec_ty)?;
         }
 
-        stmt.init_exp.accept_mut(self)?;
+        self.visit_expression(&mut stmt.init_exp)?;
         Ok(())
     }
 
-    fn visit_statements(&mut self, stmts: &mut Statements) -> Result<(), E> {
+    fn visit_statements(&mut self, stmts: &'ast mut Statements) -> Result<(), E> {
         for stmt in &mut stmts.statements {
-            stmt.kind.accept_mut(self)?;
+            self.visit_statement_kind(&mut stmt.kind)?;
         }
         Ok(())
     }
 
-    fn visit_if(&mut self, stmt: &mut IfStatement) -> Result<(), E> {
-        stmt.condition.accept_mut(self)?;
-
-        for then_stmt in &mut stmt.then_clause.statements {
-            then_stmt.kind.accept_mut(self)?;
-        }
+    fn visit_if(&mut self, stmt: &'ast mut IfStatement) -> Result<(), E> {
+        self.visit_expression(&mut stmt.condition)?;
+        self.visit_statements_vec(&mut stmt.then_clause.statements)?;
 
         if let Some(else_clause) = &mut stmt.else_clause {
-            for else_stmt in &mut else_clause.statements {
-                else_stmt.kind.accept_mut(self)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn visit_while(&mut self, stmt: &mut WhileStatement) -> Result<(), E> {
-        stmt.condition.accept_mut(self)?;
-
-        for while_stmt in &mut stmt.body.statements {
-            while_stmt.kind.accept_mut(self)?;
+            self.visit_statements_vec(&mut else_clause.statements)?;
         }
 
         Ok(())
     }
 
-    fn visit_for(&mut self, stmt: &mut ForStatement) -> Result<(), E> {
-        stmt.init_decl.accept_mut(self)?;
+    fn visit_while(&mut self, stmt: &'ast mut WhileStatement) -> Result<(), E> {
+        self.visit_expression(&mut stmt.condition)?;
 
-        stmt.modify_expression.accept_mut(self)?;
-        stmt.continue_expression.accept_mut(self)?;
-
-        for for_stmt in &mut stmt.body.statements {
-            for_stmt.kind.accept_mut(self)?;
-        }
+        self.visit_statements_vec(&mut stmt.body.statements)?;
 
         Ok(())
     }
 
-    fn visit_return(&mut self, stmt: &mut ReturnStatement) -> Result<(), E> {
-        stmt.exp.accept_mut(self)?;
+    fn visit_for(&mut self, stmt: &'ast mut ForStatement) -> Result<(), E> {
+        self.visit_let(&mut stmt.init_decl)?;
+
+        self.visit_expression(&mut stmt.modify_expression)?;
+        self.visit_expression(&mut stmt.continue_expression)?;
+
+        self.visit_statements_vec(&mut stmt.body.statements)?;
+
         Ok(())
     }
 
-    fn visit_break(&mut self, _: &mut BreakStatement) -> Result<(), E> {
-        Ok(())
-    }
-    fn visit_continue(&mut self, _: &mut ContinueStatement) -> Result<(), E> {
+    fn visit_return(&mut self, stmt: &'ast mut ReturnStatement) -> Result<(), E> {
+        self.visit_expression(&mut stmt.exp)?;
         Ok(())
     }
 
-    fn visit_expression(&mut self, expr: &mut Expression) -> Result<(), E> {
+    fn visit_break(&mut self, _: &'ast mut BreakStatement) -> Result<(), E> {
+        Ok(())
+    }
+    fn visit_continue(&mut self, _: &'ast mut ContinueStatement) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_expression(&mut self, expr: &'ast mut Expression) -> Result<(), E> {
         match expr {
-            Expression::Group(g) => g.accept_mut(self),
-            Expression::BinaryOperation(bo) => bo.accept_mut(self),
-            Expression::Literal(l) => l.accept_mut(self),
-            Expression::Call(c) => c.accept_mut(self),
-            Expression::Assignment(a) => a.accept_mut(self),
+            Expression::Group(ref mut g) => self.visit_expression(g),
+            Expression::BinaryOperation(ref mut bo) => self.visit_binary_operation(bo),
+            Expression::Literal(ref mut l) => self.visit_literal(l),
+            Expression::Call(ref mut c) => self.visit_call(c),
+            Expression::Assignment(ref mut a) => self.visit_assignment(a),
         }
     }
 
-    fn visit_binary_operation(&mut self, expr: &mut BinaryOperation) -> Result<(), E> {
-        expr.left.accept_mut(self)?;
+    fn visit_binary_operation(&mut self, expr: &'ast mut BinaryOperation) -> Result<(), E> {
+        self.visit_expression(&mut expr.left)?;
         if let Some(e) = &mut expr.right {
-            e.accept_mut(self)?;
+            self.visit_expression(e)?;
         }
 
         Ok(())
     }
 
-    fn visit_literal(&mut self, _: &mut Literal) -> Result<(), E> {
+    fn visit_literal(&mut self, _: &'ast mut Literal) -> Result<(), E> {
         Ok(())
     }
 
-    fn visit_call(&mut self, expr: &mut Call) -> Result<(), E> {
+    fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), E> {
         for expr in &mut expr.arguments {
-            expr.accept_mut(self)?;
+            self.visit_expression(expr)?;
         }
 
         Ok(())
     }
 
-    fn visit_type(&mut self, _: &mut Type) -> Result<(), E> {
+    fn visit_type(&mut self, _: &'ast mut Type) -> Result<(), E> {
         Ok(())
     }
 
-    fn visit_type_kind(&mut self, _: &mut TypeKind) -> Result<(), E> {
+    fn visit_type_kind(&mut self, _: &'ast mut TypeKind) -> Result<(), E> {
         Ok(())
     }
 
-    fn visit_assignment(&mut self, expr: &mut Assignment) -> Result<(), E> {
-        expr.left.accept_mut(self)?;
-        expr.right.accept_mut(self)
+    fn visit_assignment(&mut self, expr: &'ast mut Assignment) -> Result<(), E> {
+        self.visit_expression(&mut expr.left)?;
+        self.visit_expression(&mut expr.right)
     }
 }

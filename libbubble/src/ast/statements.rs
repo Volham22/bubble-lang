@@ -2,8 +2,9 @@ use crate::type_system;
 
 use super::{
     expressions::Expression,
+    impl_locatable,
     location::{Locatable, TokenLocation},
-    MutableVisitor, TypeKind,
+    TypeKind,
 };
 
 #[derive(Debug, Clone)]
@@ -11,20 +12,6 @@ pub enum GlobalStatement {
     Function(FunctionStatement),
     Struct(StructStatement),
     Let(LetStatement),
-}
-
-impl GlobalStatement {
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        E: std::error::Error,
-        T: MutableVisitor<E> + ?Sized,
-    {
-        match self {
-            GlobalStatement::Function(f) => v.visit_function(f),
-            GlobalStatement::Struct(s) => v.visit_struct(s),
-            GlobalStatement::Let(l) => v.visit_let(l),
-        }
-    }
 }
 
 pub type FunctionParameter = (TypeKind, String);
@@ -57,20 +44,6 @@ impl FunctionStatement {
             ty: None,
         }
     }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        E: std::error::Error,
-        T: MutableVisitor<E> + ?Sized,
-    {
-        v.visit_function(self)
-    }
-}
-
-impl Locatable for FunctionStatement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -98,20 +71,6 @@ impl LetStatement {
             ty: None,
         }
     }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        E: std::error::Error,
-        T: MutableVisitor<E> + ?Sized,
-    {
-        v.visit_let(self)
-    }
-}
-
-impl Locatable for LetStatement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -127,20 +86,6 @@ impl ReturnStatement {
             location: TokenLocation::new(begin_tk, end_tk),
         }
     }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_return(self)
-    }
-}
-
-impl Locatable for ReturnStatement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -154,20 +99,6 @@ impl BreakStatement {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_break(self)
-    }
-}
-
-impl Locatable for BreakStatement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -180,20 +111,6 @@ impl ContinueStatement {
         Self {
             location: TokenLocation::new(tk_begin, tk_end),
         }
-    }
-
-    pub fn accept_mut<E, T>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        E: std::error::Error,
-        T: MutableVisitor<E> + ?Sized,
-    {
-        v.visit_continue(self)
-    }
-}
-
-impl Locatable for ContinueStatement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
     }
 }
 
@@ -219,20 +136,6 @@ impl StructStatement {
             ty: None,
         }
     }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_struct(self)
-    }
-}
-
-impl Locatable for StructStatement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -254,12 +157,6 @@ impl Statements {
     }
 }
 
-impl Locatable for Statements {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Statement {
     pub kind: StatementKind,
@@ -275,12 +172,6 @@ impl Statement {
     }
 }
 
-impl Locatable for Statement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum StatementKind {
     If(IfStatement),
@@ -291,24 +182,6 @@ pub enum StatementKind {
     Break(BreakStatement),
     Continue(ContinueStatement),
     Expression { expr: Box<Expression>, naked: bool },
-}
-impl StatementKind {
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        match self {
-            StatementKind::If(stmt) => stmt.accept_mut(v),
-            StatementKind::While(stmt) => stmt.accept_mut(v),
-            StatementKind::For(stmt) => stmt.accept_mut(v),
-            StatementKind::Return(stmt) => stmt.accept_mut(v),
-            StatementKind::Break(stmt) => stmt.accept_mut(v),
-            StatementKind::Continue(stmt) => stmt.accept_mut(v),
-            StatementKind::Expression { expr, .. } => expr.accept_mut(v),
-            StatementKind::Let(stmt) => stmt.accept_mut(v),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -334,20 +207,6 @@ impl IfStatement {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_if(self)
-    }
-}
-
-impl Locatable for IfStatement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -369,20 +228,6 @@ impl WhileStatement {
             body,
             location: TokenLocation::new(tk_begin, tk_end),
         }
-    }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_while(self)
-    }
-}
-
-impl Locatable for WhileStatement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
     }
 }
 
@@ -413,18 +258,18 @@ impl ForStatement {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_for(self)
-    }
 }
 
-impl Locatable for ForStatement {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
-}
+impl_locatable!(
+    BreakStatement,
+    ContinueStatement,
+    ForStatement,
+    FunctionStatement,
+    IfStatement,
+    LetStatement,
+    ReturnStatement,
+    Statement,
+    Statements,
+    StructStatement,
+    WhileStatement
+);

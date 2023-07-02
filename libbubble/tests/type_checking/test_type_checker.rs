@@ -100,6 +100,10 @@ fn type_checker_valid(#[case] code: &str) {
 }
 
 #[rstest]
+#[case::bad_binary_operation_type(r#"function f(): i32 { return 2 * false; }"#, TypeCheckerError::IncompatibleOperationType {
+    operator: ast::OpType::Multiply,
+    left_ty: type_system::Type::Int,
+    right_ty: type_system::Type::Bool})]
 #[case::bad_local_variable_init(r#"
        function f() {
            let a: bool = 32;

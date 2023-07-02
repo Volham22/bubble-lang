@@ -2,8 +2,8 @@ use crate::type_system;
 
 use super::{
     bindable::Definition,
+    impl_locatable,
     location::{Locatable, TokenLocation},
-    MutableVisitor,
 };
 
 #[derive(Debug, Clone)]
@@ -13,16 +13,6 @@ pub enum Expression {
     Literal(Literal),
     Call(Call),
     Assignment(Assignment),
-}
-
-impl Expression {
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_expression(self)
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -45,20 +35,6 @@ impl Assignment {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_assignment(self)
-    }
-}
-
-impl Locatable for Assignment {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -77,20 +53,6 @@ impl Call {
             location: TokenLocation::new(tk_begin, tk_end),
             definition: None,
         }
-    }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_call(self)
-    }
-}
-
-impl Locatable for Call {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
     }
 }
 
@@ -117,20 +79,6 @@ impl BinaryOperation {
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_binary_operation(self)
-    }
-}
-
-impl Locatable for BinaryOperation {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -149,20 +97,6 @@ impl Literal {
             definition: None,
             ty: None,
         }
-    }
-
-    pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
-    where
-        T: MutableVisitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_literal(self)
-    }
-}
-
-impl Locatable for Literal {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
     }
 }
 
@@ -192,3 +126,5 @@ pub enum OpType {
     Or,
     Plus,
 }
+
+impl_locatable!(Assignment, Call, Literal, BinaryOperation);
