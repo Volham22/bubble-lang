@@ -3,7 +3,6 @@ use crate::type_system;
 use super::{
     bindable::Definition,
     location::{Locatable, TokenLocation},
-    visitor::Visitor,
     MutableVisitor,
 };
 
@@ -17,14 +16,6 @@ pub enum Expression {
 }
 
 impl Expression {
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_expression(self)
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         T: MutableVisitor<E> + ?Sized,
@@ -53,14 +44,6 @@ impl Assignment {
             right,
             location: TokenLocation::new(tk_begin, tk_end),
         }
-    }
-
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_assignment(self)
     }
 
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
@@ -94,14 +77,6 @@ impl Call {
             location: TokenLocation::new(tk_begin, tk_end),
             definition: None,
         }
-    }
-
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_call(self)
     }
 
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
@@ -143,14 +118,6 @@ impl BinaryOperation {
         }
     }
 
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_binary_operation(self)
-    }
-
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
     where
         T: MutableVisitor<E> + ?Sized,
@@ -182,14 +149,6 @@ impl Literal {
             definition: None,
             ty: None,
         }
-    }
-
-    pub fn accept<T, E>(&self, v: &mut T) -> Result<(), E>
-    where
-        T: Visitor<E> + ?Sized,
-        E: std::error::Error,
-    {
-        v.visit_literal(self)
     }
 
     pub fn accept_mut<T, E>(&mut self, v: &mut T) -> Result<(), E>
