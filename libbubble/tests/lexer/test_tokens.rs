@@ -40,6 +40,7 @@ use rstest::rstest;
     "38574895743859734589347589347598340853495873409584389573489574389574389573",
     &[Token::Error]
 )]
+#[allow(clippy::approx_constant)] // it's ok for a lexer test
 #[case::float("3.14", &[Token::Real(3.14)])]
 #[case::nothing_before_dot_float(".032", &[Token::Real(0.032)])]
 #[case::let_declaration(

@@ -282,6 +282,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "inkwell"
+version = "0.2.0"
+source = "git+https://github.com/TheDan64/inkwell?branch=master#ec963b95da169d0927112126a204a2e9d0bcaee0"
+dependencies = [
+ "either",
+ "inkwell_internals",
+ "libc",
+ "llvm-sys",
+ "once_cell",
+ "parking_lot",
+]
+
+[[package]]
+name = "inkwell_internals"
+version = "0.8.0"
+source = "git+https://github.com/TheDan64/inkwell?branch=master#ec963b95da169d0927112126a204a2e9d0bcaee0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.13",
+]
+
+[[package]]
 name = "io-lifetimes"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -346,9 +369,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "lazy_static"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+
+[[package]]
 name = "libbubble"
 version = "0.1.0"
 dependencies = [
+ "inkwell",
  "lalrpop",
  "lalrpop-util",
  "logos",
@@ -368,6 +398,19 @@ name = "linux-raw-sys"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d59d8c75012853d2e872fb56bc8a2e53718e2cafe1a4c823143141c6d90c322f"
+
+[[package]]
+name = "llvm-sys"
+version = "150.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c31c2e6d67588f0877f9e625c3d9d74130af663399311319d0139fc4f3ea009"
+dependencies = [
+ "cc",
+ "lazy_static",
+ "libc",
+ "regex",
+ "semver",
+]
 
 [[package]]
 name = "lock_api"
