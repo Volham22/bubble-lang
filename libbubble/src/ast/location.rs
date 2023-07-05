@@ -20,3 +20,24 @@ impl TokenLocation {
 pub trait Locatable {
     fn get_location(&self) -> &TokenLocation;
 }
+
+macro_rules! impl_locatable {
+    ( $( $t:ty ),* ) => {
+
+        $(
+            impl Locatable for $t {
+                fn get_location(&self) -> &TokenLocation {
+                    &self.location
+                }
+            }
+
+            impl Locatable for & $t {
+                fn get_location(&self) -> &TokenLocation {
+                    &self.location
+                }
+            }
+        )*
+    };
+}
+
+pub(crate) use impl_locatable;

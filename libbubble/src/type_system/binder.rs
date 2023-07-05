@@ -11,28 +11,28 @@ use thiserror::Error;
 use super::utils::ScopedMap;
 
 #[derive(Error, Debug)]
-pub enum BinderError {
+pub enum BinderError<'ast> {
     #[error("undeclared variable {name:?}")]
     UndeclaredVariable {
-        location: TokenLocation,
+        location: &'ast TokenLocation,
         name: String,
     },
     #[error("undeclared struct {name:?}")]
     UndeclaredStruct {
-        location: TokenLocation,
+        location: &'ast TokenLocation,
         name: String,
     },
     #[error("undeclared function {name:?}")]
     UndeclaredFunction {
-        location: TokenLocation,
+        location: &'ast TokenLocation,
         name: String,
     },
     #[error("'return' outside a function")]
-    BadReturn { location: TokenLocation },
+    BadReturn { location: &'ast TokenLocation },
     #[error("'break' outside a loop")]
-    BadBreak { location: TokenLocation },
+    BadBreak { location: &'ast TokenLocation },
     #[error("'continue' outside a loop")]
-    BadContinue { location: TokenLocation },
+    BadContinue { location: &'ast TokenLocation },
 }
 
 #[derive(Default)]
@@ -45,9 +45,12 @@ pub struct Binder {
 }
 
 impl Binder {
-    pub fn bind_statements(&mut self, stmts: &mut [GlobalStatement]) -> Result<(), BinderError> {
-        for stmt in stmts.iter_mut() {
-            stmt.accept_mut(self)?;
+    pub fn bind_statements<'ast>(
+        &mut self,
+        stmts: &'ast mut [GlobalStatement],
+    ) -> Result<(), BinderError<'ast>> {
+        for stmt in stmts {
+            self.visit_global_statement(stmt)?;
         }
 
         Ok(())
@@ -64,11 +67,11 @@ impl Binder {
     }
 }
 
-impl MutableVisitor<BinderError> for Binder {
-    fn visit_function(&mut self, stmt: &mut FunctionStatement) -> Result<(), BinderError> {
-        self.functions_statements
-            .insert(stmt.name.to_string(), stmt.clone());
-
+impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
+    fn visit_function(
+        &mut self,
+        stmt: &'ast mut FunctionStatement,
+    ) -> Result<(), BinderError<'ast>> {
         self.local_variables.new_scope();
         let location = stmt.get_location();
 
@@ -92,6 +95,8 @@ impl MutableVisitor<BinderError> for Binder {
             );
         }
 
+        self.functions_statements
+            .insert(stmt.name.to_string(), stmt.clone());
         self.in_function = true;
         self.visit_statements(&mut stmt.body)?;
         self.in_function = false;
@@ -100,101 +105,97 @@ impl MutableVisitor<BinderError> for Binder {
         Ok(())
     }
 
-    fn visit_struct(&mut self, stmt: &mut StructStatement) -> Result<(), BinderError> {
+    fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), BinderError<'ast>> {
         self.struct_statement
             .insert(stmt.name.to_string(), stmt.clone());
 
         for (kind, _) in &mut stmt.fields {
-            kind.accept_mut(self)?;
+            self.visit_type_kind(kind)?;
         }
 
         Ok(())
     }
 
-    fn visit_let(&mut self, stmt: &mut LetStatement) -> Result<(), BinderError> {
+    fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), BinderError<'ast>> {
         self.local_variables.insert_symbol(&stmt.name, stmt.clone());
-        stmt.init_exp.accept_mut(self)?;
+        self.visit_expression(&mut stmt.init_exp)?;
         Ok(())
     }
 
-    fn visit_if(&mut self, stmt: &mut IfStatement) -> Result<(), BinderError> {
-        stmt.condition.accept_mut(self)?;
+    fn visit_if(&mut self, stmt: &'ast mut IfStatement) -> Result<(), BinderError<'ast>> {
+        self.visit_expression(&mut stmt.condition)?;
 
         self.local_variables.new_scope();
-        for then_stmt in &mut stmt.then_clause.statements {
-            then_stmt.kind.accept_mut(self)?;
-        }
+        self.visit_statements_vec(&mut stmt.then_clause.statements)?;
         self.local_variables.delete_scope();
 
         if let Some(else_clause) = &mut stmt.else_clause {
             self.local_variables.new_scope();
-            for else_stmt in &mut else_clause.statements {
-                else_stmt.kind.accept_mut(self)?;
-            }
+            self.visit_statements_vec(&mut else_clause.statements)?;
             self.local_variables.delete_scope();
         }
+
         Ok(())
     }
 
-    fn visit_while(&mut self, stmt: &mut WhileStatement) -> Result<(), BinderError> {
-        stmt.condition.accept_mut(self)?;
+    fn visit_while(&mut self, stmt: &'ast mut WhileStatement) -> Result<(), BinderError<'ast>> {
+        self.visit_expression(&mut stmt.condition)?;
 
         self.begin_loop();
-        for while_stmt in &mut stmt.body.statements {
-            while_stmt.kind.accept_mut(self)?;
-        }
+        self.visit_statements_vec(&mut stmt.body.statements)?;
         self.end_loop();
 
         Ok(())
     }
 
-    fn visit_for(&mut self, stmt: &mut ForStatement) -> Result<(), BinderError> {
+    fn visit_for(&mut self, stmt: &'ast mut ForStatement) -> Result<(), BinderError<'ast>> {
         self.begin_loop();
-        stmt.init_decl.accept_mut(self)?;
 
-        stmt.modify_expression.accept_mut(self)?;
-        stmt.continue_expression.accept_mut(self)?;
+        self.visit_let(&mut stmt.init_decl)?;
+        self.visit_expression(&mut stmt.modify_expression)?;
+        self.visit_expression(&mut stmt.continue_expression)?;
+        self.visit_statements_vec(&mut stmt.body.statements)?;
 
-        for for_stmt in &mut stmt.body.statements {
-            for_stmt.kind.accept_mut(self)?;
-        }
         self.end_loop();
 
         Ok(())
     }
 
-    fn visit_return(&mut self, stmt: &mut ReturnStatement) -> Result<(), BinderError> {
-        stmt.exp.accept_mut(self)?;
+    fn visit_return(&mut self, stmt: &'ast mut ReturnStatement) -> Result<(), BinderError<'ast>> {
         if !self.in_function {
             Err(BinderError::BadReturn {
-                location: stmt.get_location().clone(),
+                location: stmt.get_location(),
             })
         } else {
+            self.visit_expression(&mut stmt.exp)?;
             Ok(())
         }
     }
 
-    fn visit_break(&mut self, stmt: &mut BreakStatement) -> Result<(), BinderError> {
+    fn visit_break(&mut self, stmt: &'ast mut BreakStatement) -> Result<(), BinderError<'ast>> {
         if self.nested_loop == 0 {
             Err(BinderError::BadBreak {
-                location: stmt.get_location().clone(),
+                location: stmt.get_location(),
             })
         } else {
             Ok(())
         }
     }
 
-    fn visit_continue(&mut self, stmt: &mut ContinueStatement) -> Result<(), BinderError> {
+    fn visit_continue(
+        &mut self,
+        stmt: &'ast mut ContinueStatement,
+    ) -> Result<(), BinderError<'ast>> {
         if self.nested_loop == 0 {
             Err(BinderError::BadContinue {
-                location: stmt.get_location().clone(),
+                location: stmt.get_location(),
             })
         } else {
             Ok(())
         }
     }
 
-    fn visit_literal(&mut self, expr: &mut Literal) -> Result<(), BinderError> {
+    fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), BinderError<'ast>> {
         if let LiteralType::Identifier(name) = &expr.literal_type {
             match self.local_variables.find_symbol(name) {
                 Some(var) => {
@@ -202,7 +203,7 @@ impl MutableVisitor<BinderError> for Binder {
                     Ok(())
                 }
                 None => Err(BinderError::UndeclaredVariable {
-                    location: expr.get_location().clone(),
+                    location: expr.get_location(),
                     name: name.clone(),
                 }),
             }
@@ -211,25 +212,26 @@ impl MutableVisitor<BinderError> for Binder {
         }
     }
 
-    fn visit_call(&mut self, expr: &mut Call) -> Result<(), BinderError> {
+    fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), BinderError<'ast>> {
         let declaration = self.functions_statements.get(&expr.callee);
         if declaration.is_none() {
             return Err(BinderError::UndeclaredFunction {
-                location: expr.get_location().clone(),
+                location: expr.get_location(),
                 name: expr.callee.to_string(),
             });
         }
 
-        expr.set_definition(Definition::Function(declaration.unwrap().clone()));
+        let dec = declaration.unwrap();
+        expr.set_definition(Definition::Function((*dec).clone()));
 
         for arg in &mut expr.arguments {
-            arg.accept_mut(self)?;
+            self.visit_expression(arg)?;
         }
 
         Ok(())
     }
 
-    fn visit_type(&mut self, expr: &mut Type) -> Result<(), BinderError> {
+    fn visit_type(&mut self, expr: &'ast mut Type) -> Result<(), BinderError<'ast>> {
         match &expr.kind {
             TypeKind::Identifier(name) => {
                 let declaration = self.struct_statement.get(name);
@@ -238,7 +240,7 @@ impl MutableVisitor<BinderError> for Binder {
                     Ok(())
                 } else {
                     Err(BinderError::UndeclaredStruct {
-                        location: TokenLocation::new(0, 0), // FIXME: Add proper location for type identifier
+                        location: expr.get_location(),
                         name: name.clone(),
                     })
                 }

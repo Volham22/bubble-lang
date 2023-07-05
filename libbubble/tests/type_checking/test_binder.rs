@@ -1,6 +1,8 @@
 use rstest::rstest;
 
-use crate::assets::run_bindings;
+use libbubble::type_system::binder;
+
+use crate::assets::parse_global_statements_input;
 
 #[rstest]
 #[case::variable_binding(
@@ -81,7 +83,9 @@ use crate::assets::run_bindings;
 "#
 )]
 fn test_binding_good(#[case] code: &str) {
-    assert!(run_bindings(code).is_ok());
+    let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
+    let mut binder = binder::Binder::default();
+    assert!(binder.bind_statements(&mut stmts).is_ok());
 }
 
 #[rstest]
@@ -144,5 +148,7 @@ fn test_binding_good(#[case] code: &str) {
    "#
 )]
 fn test_binding_bad(#[case] code: &str) {
-    assert!(run_bindings(code).is_err());
+    let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
+    let mut binder = binder::Binder::default();
+    assert!(binder.bind_statements(&mut stmts).is_err());
 }

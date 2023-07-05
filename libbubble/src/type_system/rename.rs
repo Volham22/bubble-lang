@@ -17,11 +17,12 @@ pub struct Renamer {
 impl Renamer {
     pub fn rename_statements(&mut self, stmts: &mut [GlobalStatement]) -> Result<(), Infallible> {
         for stmt in stmts {
-            stmt.accept_mut(self)?;
+            self.visit_global_statement(stmt)?;
         }
 
         Ok(())
     }
+
     fn new_symbol(&mut self, symbol: &str) -> String {
         self.symbol_count += 1;
         format!("{}_{}", symbol, self.symbol_count)
@@ -30,7 +31,7 @@ impl Renamer {
 
 // Renamer should never fail because errors must be caught by the previous
 // compiler passes. Infallible should be replaced by `!` in future Rust's versions
-impl MutableVisitor<Infallible> for Renamer {
+impl<'ast> MutableVisitor<'ast, Infallible> for Renamer {
     fn visit_function(&mut self, stmt: &mut FunctionStatement) -> Result<(), Infallible> {
         let location = stmt.get_location().clone();
         self.variables.new_scope();
@@ -69,14 +70,14 @@ impl MutableVisitor<Infallible> for Renamer {
     fn visit_let(&mut self, stmt: &mut LetStatement) -> Result<(), Infallible> {
         let prev_name = stmt.name.clone();
         stmt.name = self.new_symbol(&stmt.name);
-        stmt.init_exp.accept_mut(self)?;
+        self.visit_expression(&mut stmt.init_exp)?;
         self.variables.insert_symbol(&prev_name, stmt.clone());
 
         Ok(())
     }
 
     fn visit_if(&mut self, stmt: &mut IfStatement) -> Result<(), Infallible> {
-        stmt.condition.accept_mut(self)?;
+        self.visit_expression(&mut stmt.condition)?;
         self.variables.new_scope();
         self.visit_statements(&mut stmt.then_clause)?;
         self.variables.delete_scope();
@@ -91,7 +92,7 @@ impl MutableVisitor<Infallible> for Renamer {
     }
 
     fn visit_while(&mut self, stmt: &mut WhileStatement) -> Result<(), Infallible> {
-        stmt.condition.accept_mut(self)?;
+        self.visit_expression(&mut stmt.condition)?;
 
         self.variables.new_scope();
         self.visit_statements(&mut stmt.body)?;
@@ -102,9 +103,9 @@ impl MutableVisitor<Infallible> for Renamer {
 
     fn visit_for(&mut self, stmt: &mut ForStatement) -> Result<(), Infallible> {
         self.variables.new_scope();
-        stmt.init_decl.accept_mut(self)?;
-        stmt.modify_expression.accept_mut(self)?;
-        stmt.continue_expression.accept_mut(self)?;
+        self.visit_let(&mut stmt.init_decl)?;
+        self.visit_expression(&mut stmt.modify_expression)?;
+        self.visit_expression(&mut stmt.continue_expression)?;
         self.visit_statements(&mut stmt.body)?;
         self.variables.delete_scope();
 
