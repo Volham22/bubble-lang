@@ -134,7 +134,11 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
     }
 
     fn visit_return(&mut self, stmt: &'ast mut ReturnStatement) -> Result<(), TypeCheckerError> {
-        self.visit_expression(&mut stmt.exp)?;
+        if let Some(ref mut exp) = stmt.exp {
+            self.visit_expression(exp)?;
+        } else {
+            self.current_type = Some(Type::Void);
+        }
 
         match self
             .current_function
@@ -152,11 +156,6 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                         expected: return_type.deref().clone(),
                     })
                 } else {
-                    println!(
-                        "{:?} compatible with {:?}",
-                        return_type,
-                        self.current_type.as_ref().unwrap()
-                    );
                     Ok(())
                 }
             }
@@ -179,7 +178,6 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
 
     fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), TypeCheckerError> {
         self.visit_expression(&mut stmt.init_exp)?;
-        stmt.set_type(self.current_type.clone().unwrap());
 
         match &stmt.declaration_type {
             Some(ty) => {
@@ -194,9 +192,12 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     });
                 }
 
-                self.current_type = Some(real_type);
+                self.current_type = Some(real_type.clone());
+                stmt.set_type(real_type);
             }
-            None => {}
+            None => {
+                stmt.set_type(self.current_type.as_ref().unwrap().clone());
+            }
         }
 
         Ok(())
@@ -379,14 +380,17 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 match literal.get_definition().clone() {
                     Definition::Struct(ref mut strct) => {
                         self.visit_struct(strct)?;
+                        literal.set_type(self.current_type.as_ref().unwrap().clone());
                         Ok(())
                     }
                     Definition::LocalVariable(ref mut v) => {
                         self.visit_let(v)?;
+                        literal.set_type(self.current_type.as_ref().unwrap().clone());
                         Ok(())
                     }
                     Definition::Function(ref mut f) => {
                         self.visit_function(f)?;
+                        literal.set_type(self.current_type.as_ref().unwrap().clone());
                         Ok(())
                     }
                 }

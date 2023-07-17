@@ -172,7 +172,11 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
 
     fn visit_return(&mut self, stmt: &ReturnStatement) -> PrinterResult {
         self.write("return ")?;
-        self.visit_expression(&stmt.exp)?;
+
+        if let Some(ref exp) = stmt.exp {
+            self.visit_expression(exp)?;
+        }
+
         self.write(";")
     }
 

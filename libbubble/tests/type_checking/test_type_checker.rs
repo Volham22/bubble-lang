@@ -21,6 +21,21 @@ use crate::assets::run_type_checker;
     }
 "#
 )]
+#[case::void_function_return_void(
+    r#"
+    function f() {
+        return;
+    }
+"#
+)]
+#[case::infer_type_int(
+    r#"
+    function f(): i64 {
+        let a = 32;
+        return a;
+    }
+"#
+)]
 #[case::valid_variable_init_with_type_inference(
     r#"
     function f() {

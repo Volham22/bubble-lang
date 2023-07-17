@@ -75,12 +75,12 @@ impl LetStatement {
 
 #[derive(Debug, Clone)]
 pub struct ReturnStatement {
-    pub exp: Box<Expression>,
+    pub exp: Option<Box<Expression>>,
     location: TokenLocation,
 }
 
 impl ReturnStatement {
-    pub fn new(begin_tk: usize, end_tk: usize, exp: Box<Expression>) -> Self {
+    pub fn new(begin_tk: usize, end_tk: usize, exp: Option<Box<Expression>>) -> Self {
         Self {
             exp,
             location: TokenLocation::new(begin_tk, end_tk),

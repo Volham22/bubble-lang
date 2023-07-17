@@ -55,7 +55,8 @@ Let: LetStatement = {
 }
 
 Return: ReturnStatement = {
-    <l:@L> "return" <exp:Expr> ";" <r:@R> => ReturnStatement::new(l, r, Box::new(exp)),
+    <l:@L> "return" <exp:Expr> ";" <r:@R> => ReturnStatement::new(l, r, Some(Box::new(exp))),
+    <l:@L> "return" ";" <r:@R> => ReturnStatement::new(l, r, None),
 }
 
 Break: BreakStatement = {

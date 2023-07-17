@@ -5,6 +5,7 @@ use crate::{
     type_system::{Typable, Type},
 };
 
+#[derive(Debug)]
 pub struct StackVariable<'a> {
     pub name: &'a str,
     pub kind: &'a Type,
@@ -48,12 +49,16 @@ impl<'ast> Visitor<'ast, Infallible> for Collector<'ast> {
                 for (ty, name) in parameters {
                     collected_parameters.push(StackVariable::new(name, ty))
                 }
+
+                self.current_function = Some(&stmt.name);
+                self.function_symbols
+                    .insert(&stmt.name, collected_parameters);
+                self.visit_statements(&stmt.body)?;
+                self.current_function = None;
             }
             _ => unreachable!(),
         }
 
-        self.function_symbols
-            .insert(&stmt.name, collected_parameters);
 
         Ok(())
     }

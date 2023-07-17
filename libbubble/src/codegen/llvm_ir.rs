@@ -4,7 +4,8 @@ use inkwell::{
     module::{Linkage, Module},
     types::{AnyTypeEnum, BasicMetadataTypeEnum, BasicType, BasicTypeEnum},
     values::{
-        AnyValue, AnyValueEnum, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue,
+        AnyValue, AnyValueEnum, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue,
+        PointerValue,
     },
     AddressSpace, FloatPredicate, IntPredicate,
 };
@@ -12,29 +13,47 @@ use std::{collections::HashMap, convert::Infallible};
 
 use crate::{
     ast::{
-        Assignment, BinaryOperation, BreakStatement, Call, ForStatement, FunctionStatement,
-        IfStatement, LetStatement, Literal, OpType, ReturnStatement, StructStatement, Visitor,
-        WhileStatement,
+        Assignment, BinaryOperation, BreakStatement, Call, Expression, ForStatement,
+        FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType,
+        OpType, ReturnStatement, StructStatement, Visitor, WhileStatement,
     },
     codegen::locals_collector::SymbolsMap,
     type_system::{self, Type},
 };
 
-pub struct Translator<'ctx, 'ast> {
+use super::Collector;
+
+pub fn build_module<'ctx>(
     context: &'ctx Context,
-    builder: &'ctx Builder<'ctx>,
-    module: Module<'ctx>,
+    module: &Module<'ctx>,
+    statements: &[GlobalStatement],
+) {
+    let mut frame_table = Collector::default();
+    // Collect local variables and function parameters
+    let symbol_map = frame_table.dump_global_statements(statements).unwrap();
+
+    let builder = context.create_builder();
+
+    let mut translator = Translator::new(context, builder, module, symbol_map);
+    translator.translate_statements(statements).unwrap();
+    translator.print_code();
+}
+
+pub struct Translator<'ctx, 'ast, 'module> {
+    context: &'ctx Context,
+    builder: Builder<'ctx>,
+    module: &'module Module<'ctx>,
     frame_table: &'ast SymbolsMap<'ast>,
     variables: HashMap<&'ast str, PointerValue<'ctx>>,
     current_fn_value: Option<FunctionValue<'ctx>>,
     current_value: Option<AnyValueEnum<'ctx>>,
 }
 
-impl<'ctx, 'ast> Translator<'ctx, 'ast> {
+impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
     pub fn new(
         context: &'ctx Context,
-        builder: &'ctx Builder<'ctx>,
-        module: Module<'ctx>,
+        builder: Builder<'ctx>,
+        module: &'module Module<'ctx>,
         frame_table: &'ast SymbolsMap<'ast>,
     ) -> Self {
         Self {
@@ -46,6 +65,33 @@ impl<'ctx, 'ast> Translator<'ctx, 'ast> {
             current_fn_value: None,
             current_value: None,
         }
+    }
+
+    pub fn translate_statements(
+        &mut self,
+        stmts: &'ast [GlobalStatement],
+    ) -> Result<(), Infallible> {
+        for stmt in stmts {
+            self.visit_global_statement(stmt)?;
+        }
+
+        if let Err(msg) = self.module.verify() {
+            self.print_code();
+            eprintln!("Failed to verify module!\n{}", msg.to_string());
+        }
+
+        Ok(())
+    }
+
+    pub fn print_code(&self) {
+        let content = self.module.print_to_string().to_string();
+        println!(
+            "==== LLVM IR of module '{}' ====",
+            self.module.get_name().to_str().unwrap()
+        );
+
+        println!("{}", content);
+        println!("==============================")
     }
 
     #[inline]
@@ -132,7 +178,7 @@ impl<'ctx, 'ast> Translator<'ctx, 'ast> {
     }
 }
 
-impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
+impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, 'module> {
     fn visit_function(&mut self, stmt: &'ast FunctionStatement) -> Result<(), Infallible> {
         let (return_type, parameters) = if let Type::Function {
             return_type,
@@ -144,7 +190,6 @@ impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
             panic!("Function type isn't a function type!")
         };
 
-        let llvm_return_type = self.as_basic_type(self.to_llvm_type(return_type));
         let llvm_parameters_type: Vec<BasicMetadataTypeEnum<'ctx>> = parameters
             .iter()
             .map(|(ty, _)| {
@@ -154,10 +199,22 @@ impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
             })
             .collect();
 
-        let fn_ty = llvm_return_type.fn_type(&llvm_parameters_type, false);
+        let fn_ty = if *return_type.as_ref() != type_system::Type::Void {
+            self.as_basic_type(self.to_llvm_type(return_type))
+                .fn_type(&llvm_parameters_type, false)
+        } else {
+            self.context
+                .void_type()
+                .fn_type(&llvm_parameters_type, false)
+        };
+
         let fn_val = self
             .module
             .add_function(&stmt.name, fn_ty, Some(Linkage::External));
+
+        self.current_fn_value = Some(fn_val);
+        let entry = self.context.append_basic_block(fn_val, &stmt.name);
+        self.builder.position_at_end(entry);
 
         for (i, arg) in fn_val.get_param_iter().enumerate() {
             arg.set_name(&stmt.parameters[i].1);
@@ -179,6 +236,9 @@ impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
             );
         }
 
+        self.visit_statements(&stmt.body)?;
+        self.current_fn_value = None;
+
         Ok(())
     }
 
@@ -196,7 +256,15 @@ impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
 
         self.builder.build_store(
             *store_value,
-            self.current_value.unwrap().into_pointer_value(),
+            match self.current_value.unwrap() {
+                AnyValueEnum::ArrayValue(v) => v.as_basic_value_enum(),
+                AnyValueEnum::IntValue(v) => v.as_basic_value_enum(),
+                AnyValueEnum::FloatValue(v) => v.as_basic_value_enum(),
+                AnyValueEnum::PointerValue(v) => v.as_basic_value_enum(),
+                AnyValueEnum::StructValue(v) => v.as_basic_value_enum(),
+                AnyValueEnum::VectorValue(v) => v.as_basic_value_enum(),
+                _ => unreachable!(),
+            },
         );
 
         self.current_value = Some(store_value.as_any_value_enum());
@@ -218,8 +286,8 @@ impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
         );
 
         let then_bb = self.context.append_basic_block(parent, "then");
-        let else_bb = self.context.append_basic_block(parent, "then");
-        let merge_bb = self.context.append_basic_block(parent, "then");
+        let else_bb = self.context.append_basic_block(parent, "else");
+        let merge_bb = self.context.append_basic_block(parent, "merge");
 
         self.builder
             .build_conditional_branch(condition, then_bb, else_bb);
@@ -228,14 +296,12 @@ impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
         self.visit_statements(&stmt.then_clause)?;
         self.builder.build_unconditional_branch(merge_bb);
 
+        self.builder.position_at_end(else_bb);
         if let Some(ref stmts) = stmt.else_clause {
-            self.builder.position_at_end(else_bb);
             self.visit_statements(stmts)?;
-            self.builder.build_unconditional_branch(merge_bb);
-
-            self.builder.get_insert_block().unwrap();
         }
 
+        self.builder.build_unconditional_branch(merge_bb);
         self.builder.position_at_end(merge_bb);
         Ok(())
     }
@@ -268,19 +334,23 @@ impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
     }
 
     fn visit_return(&mut self, stmt: &'ast ReturnStatement) -> Result<(), Infallible> {
-        self.visit_expression(&stmt.exp)?;
+        if let Some(ref exp) = stmt.exp {
+            self.visit_expression(exp)?;
 
-        // FIXME: Very ugly way to retrieve a &dyn BasicValue handle from a AnyValueEnum
-        self.builder
-            .build_return(Some(match self.current_value.as_ref().unwrap() {
-                AnyValueEnum::ArrayValue(v) => v,
-                AnyValueEnum::IntValue(v) => v,
-                AnyValueEnum::FloatValue(v) => v,
-                AnyValueEnum::PointerValue(v) => v,
-                AnyValueEnum::StructValue(v) => v,
-                AnyValueEnum::VectorValue(v) => v,
-                _ => panic!("value is not basic!"),
-            }));
+            // FIXME: Very ugly way to retrieve a &dyn BasicValue handle from a AnyValueEnum
+            self.builder
+                .build_return(Some(match self.current_value.as_ref().unwrap() {
+                    AnyValueEnum::ArrayValue(v) => v,
+                    AnyValueEnum::IntValue(v) => v,
+                    AnyValueEnum::FloatValue(v) => v,
+                    AnyValueEnum::PointerValue(v) => v,
+                    AnyValueEnum::StructValue(v) => v,
+                    AnyValueEnum::VectorValue(v) => v,
+                    _ => panic!("value is not basic!"),
+                }));
+        } else {
+            self.builder.build_return(None);
+        }
 
         Ok(())
     }
@@ -456,10 +526,18 @@ impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
                 self.current_value = Some(self.context.f64_type().const_float(*x).into())
             }
             crate::ast::LiteralType::Identifier(id) => {
+                let ptr = self
+                    .variables
+                    .get(id.as_str())
+                    .expect("variable not found!");
+
                 self.current_value = Some(
-                    self.variables
-                        .get(id.as_str())
-                        .expect("variable not found!")
+                    self.builder
+                        .build_load(
+                            self.as_basic_type(self.to_llvm_type(stmt.ty.as_ref().unwrap())),
+                            *ptr,
+                            "load",
+                        )
                         .as_any_value_enum(),
                 );
             }
@@ -491,13 +569,22 @@ impl<'ast, 'ctx> Visitor<'ast, Infallible> for Translator<'ctx, 'ast> {
     }
 
     fn visit_assignment(&mut self, expr: &'ast Assignment) -> Result<(), Infallible> {
-        self.visit_expression(&expr.left)?;
-        let lhs = self.current_value.unwrap();
         self.visit_expression(&expr.right)?;
         let rhs = self.current_value.unwrap();
 
-        self.builder
-            .build_store(lhs.into_pointer_value(), self.as_basic_value(rhs));
+        // TODO: Add an `as_lvalue` method for `Literal` to make it cleaner
+        let lhs = self
+            .variables
+            .get(match expr.left.as_ref() {
+                Expression::Literal(l) => match &l.literal_type {
+                    LiteralType::Identifier(id) => id.as_str(),
+                    _ => unreachable!(),
+                },
+                _ => unreachable!(),
+            })
+            .unwrap();
+
+        self.builder.build_store(*lhs, self.as_basic_value(rhs));
 
         Ok(())
     }

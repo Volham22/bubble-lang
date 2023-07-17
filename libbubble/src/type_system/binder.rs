@@ -167,7 +167,10 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
                 location: stmt.get_location(),
             })
         } else {
-            self.visit_expression(&mut stmt.exp)?;
+            if let Some(ref mut exp) = stmt.exp {
+                self.visit_expression(exp)?;
+            }
+
             Ok(())
         }
     }

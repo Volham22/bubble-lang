@@ -89,7 +89,10 @@ pub trait Visitor<'ast, E: std::error::Error> {
     }
 
     fn visit_return(&mut self, stmt: &'ast ReturnStatement) -> Result<(), E> {
-        self.visit_expression(&stmt.exp)?;
+        if let Some(ref exp) = stmt.exp {
+        self.visit_expression(exp)?;
+        }
+
         Ok(())
     }
 
@@ -237,7 +240,10 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
     }
 
     fn visit_return(&mut self, stmt: &'ast mut ReturnStatement) -> Result<(), E> {
-        self.visit_expression(&mut stmt.exp)?;
+        if let Some(ref mut exp) = stmt.exp {
+            self.visit_expression(exp)?;
+        }
+
         Ok(())
     }
 

@@ -2,3 +2,6 @@
 
 # This file is auto generated
 grammar.rs
+
+# bubble object files
+*.o
