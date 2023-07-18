@@ -208,9 +208,22 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 .fn_type(&llvm_parameters_type, false)
         };
 
-        let fn_val = self
-            .module
-            .add_function(&stmt.name, fn_ty, Some(Linkage::External));
+        let fn_val = self.module.add_function(
+            &stmt.name,
+            fn_ty,
+            Some(if stmt.body.is_some() {
+                // We don't want external function to be exported
+                Linkage::External
+            } else {
+                Linkage::ExternalWeak
+            }),
+        );
+
+        // Stop function generation here it's an extern declaration
+        if stmt.body.is_none() {
+            self.current_fn_value = None;
+            return Ok(());
+        }
 
         self.current_fn_value = Some(fn_val);
         let entry = self.context.append_basic_block(fn_val, &stmt.name);
@@ -236,7 +249,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
             );
         }
 
-        self.visit_statements(&stmt.body)?;
+        self.visit_statements(stmt.body.as_ref().unwrap())?;
         self.current_fn_value = None;
 
         Ok(())
@@ -544,7 +557,8 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
             LiteralType::String(content) => {
                 self.current_value = Some(
                     self.builder
-                        .build_global_string_ptr(content.as_str(), "string_literal").as_any_value_enum(),
+                        .build_global_string_ptr(content.as_str(), "string_literal")
+                        .as_any_value_enum(),
                 );
             }
         }

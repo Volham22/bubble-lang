@@ -43,6 +43,10 @@ impl<'ast> Collector<'ast> {
 
 impl<'ast> Visitor<'ast, Infallible> for Collector<'ast> {
     fn visit_function(&mut self, stmt: &'ast FunctionStatement) -> Result<(), Infallible> {
+        if stmt.is_extern {
+            return Ok(());
+        }
+
         let mut collected_parameters: Vec<StackVariable<'ast>> = Vec::new();
         match stmt.get_type() {
             Type::Function { parameters, .. } => {
@@ -53,12 +57,11 @@ impl<'ast> Visitor<'ast, Infallible> for Collector<'ast> {
                 self.current_function = Some(&stmt.name);
                 self.function_symbols
                     .insert(&stmt.name, collected_parameters);
-                self.visit_statements(&stmt.body)?;
+                self.visit_statements(stmt.body.as_ref().unwrap())?;
                 self.current_function = None;
             }
             _ => unreachable!(),
         }
-
 
         Ok(())
     }

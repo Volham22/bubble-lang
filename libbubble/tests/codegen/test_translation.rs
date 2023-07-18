@@ -81,6 +81,27 @@ use crate::assets::build_and_link;
     "/tmp/let_string_variable",
     0
 )]
+#[case::extern_function_declaration(
+    r#"
+    extern function b(): i32;
+
+    function main(): i64 {
+        return 0;
+}"#,
+    "/tmp/extern_function_declaration",
+    0
+)]
+#[case::use_libc_puts(
+    r#"
+    extern function puts(str: string): i32;
+
+    function main(): i64 {
+        puts("Hello, World!");
+        return 0;
+}"#,
+    "/tmp/use_libc_puts",
+    0
+)]
 #[case::main_return_void(r#"function main() { return; }"#, "/tmp/return_void", 0)]
 fn test_translation(
     #[case] code: &str,

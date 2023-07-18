@@ -75,7 +75,9 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         self.write(" {")?;
         self.indent_and_newline()?;
 
-        self.visit_statements_vec(&stmt.body.statements)?;
+        if let Some(body) = &stmt.body {
+            self.visit_statements(body)?;
+        }
 
         self.dec_indent_and_newline()?;
         self.write("}\n")?;

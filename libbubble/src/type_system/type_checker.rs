@@ -127,7 +127,9 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
         self.current_function = Some(function_type.clone());
         stmt.set_type(function_type);
 
-        self.visit_statements_vec(&mut stmt.body.statements)?;
+        if let Some(body) = stmt.body.as_mut() {
+            self.visit_statements(body)?;
+        }
 
         self.current_function = None;
         Ok(())

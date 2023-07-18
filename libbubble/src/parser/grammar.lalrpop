@@ -32,10 +32,13 @@ pub GlobalStatement: GlobalStatement = {
 
 Function: FunctionStatement = {
     <l:@L> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" "{" <body:Statements> "}" <r:@R> => {
-        FunctionStatement::new(l, r, name, parameters, TypeKind::Void, body)
+        FunctionStatement::new(l, r, name, parameters, TypeKind::Void, false, Some(body))
     },
     <l:@L> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" ":" <return_type:Type> "{" <body:Statements> "}" <r:@R> => {
-        FunctionStatement::new(l, r, name, parameters, return_type.kind, body)
+        FunctionStatement::new(l, r, name, parameters, return_type.kind, false, Some(body))
+    },
+    <l:@L> "extern" "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" ":" <return_type:Type> ";" <r:@R> => {
+        FunctionStatement::new(l, r, name, parameters, return_type.kind, true, None)
     },
 }
 
@@ -277,6 +280,7 @@ extern {
         "let" => Token::Let,
         "break" => Token::Break,
         "continue" => Token::Continue,
+        "extern" => Token::Extern,
         "true" => Token::True,
         "false" => Token::False,
         "u8" => Token::U8Ty,

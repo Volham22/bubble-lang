@@ -134,6 +134,26 @@ use crate::assets::run_type_checker;
     }
 "#
 )]
+#[case::extern_function_declaration_call(
+    r#"
+    extern function b(): i32;
+
+    function f(): i64 {
+        b();
+        return 0;
+    }
+"#
+)]
+#[case::extern_function_declaration_call_with_args(
+    r#"
+    extern function b(n: i32): i32;
+
+    function f(): i64 {
+        b(32);
+        return 0;
+    }
+"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -172,6 +192,17 @@ fn type_checker_valid(#[case] code: &str) {
        }
    "#,
     TypeCheckerError::NonBoolCondition(type_system::Type::Float)
+)]
+#[case::extern_function_declaration_call_bad_args(
+    r#"
+    extern function b(n: i32): i32;
+
+    function f(): i64 {
+        b();
+        return 0;
+    }
+    "#,
+    TypeCheckerError::BadParameterCount { expected: 1, got: 0 }
 )]
 #[case::condition_not_bool_if(
     r#"

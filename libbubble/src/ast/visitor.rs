@@ -37,7 +37,11 @@ pub trait Visitor<'ast, E: std::error::Error> {
     }
 
     fn visit_function(&mut self, stmt: &'ast FunctionStatement) -> Result<(), E> {
-        self.visit_statements_vec(&stmt.body.statements)
+        if let Some(body) = stmt.body.as_ref() {
+            self.visit_statements(body)?;
+        }
+
+        Ok(())
     }
 
     fn visit_struct(&mut self, stmt: &'ast StructStatement) -> Result<(), E> {
@@ -90,7 +94,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
 
     fn visit_return(&mut self, stmt: &'ast ReturnStatement) -> Result<(), E> {
         if let Some(ref exp) = stmt.exp {
-        self.visit_expression(exp)?;
+            self.visit_expression(exp)?;
         }
 
         Ok(())
@@ -179,8 +183,8 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
     }
 
     fn visit_function(&mut self, stmt: &'ast mut FunctionStatement) -> Result<(), E> {
-        for stmt in &mut stmt.body.statements {
-            self.visit_statement_kind(&mut stmt.kind)?;
+        if let Some(body) = stmt.body.as_mut() {
+            self.visit_statements(body)?;
         }
 
         Ok(())

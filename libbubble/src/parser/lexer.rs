@@ -123,6 +123,8 @@ pub enum Token {
     True,
     #[token("false")]
     False,
+    #[token("extern")]
+    Extern,
 
     // =================
     //       Types

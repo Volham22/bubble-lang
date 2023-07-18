@@ -25,8 +25,15 @@ pub fn parse_global_statements_input(code: &str) -> StatementsParserResult<Vec<G
 }
 
 fn main() {
-    let mut stmts = parse_global_statements_input(r#"function main(): i64 { let a: i64 = 32; return 0; }"#)
-        .expect("Failed to parse code");
+    let mut stmts = parse_global_statements_input(
+        r#"    extern function puts(str: string): i32;
+
+    function main(): i64 {
+        puts("Hello, World!");
+        return 0;
+}"#,
+    )
+    .expect("Failed to parse code");
     let mut binder = Binder::default();
     let mut type_checker = TypeChecker::default();
     binder.bind_statements(&mut stmts).expect("Binder failed");

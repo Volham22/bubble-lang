@@ -35,6 +35,7 @@ use rstest::rstest;
 #[case::type_unsigned("u8 u16 u32 u64", &[Token::U8Ty, Token::U16Ty, Token::U32Ty, Token::U64Ty])]
 #[case::type_unsigned("i8 i16 i32 i64", &[Token::I8Ty, Token::I16Ty, Token::I32Ty, Token::I64Ty])]
 #[case::type_string("string", &[Token::StringTy])]
+#[case::type_string("extern function", &[Token::Extern, Token::Function])]
 #[case::type_bool("bool", &[Token::BoolTy])]
 #[case::case_string_literal(r#""Salut les amis""#, &[Token::String("Salut les amis".to_string())])]
 #[case::identifier("my_var", &[Token::Identifier("my_var".to_string())])]

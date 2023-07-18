@@ -86,6 +86,15 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::extern_function_declaration(
+    r#"
+    extern function b(): i32;
+
+    function f(): i64 {
+        return 0;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

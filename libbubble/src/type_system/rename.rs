@@ -56,7 +56,10 @@ impl<'ast> MutableVisitor<'ast, Infallible> for Renamer {
             );
         }
 
-        self.visit_statements(&mut stmt.body)?;
+        if let Some(body) = stmt.body.as_mut() {
+            self.visit_statements(body)?;
+        }
+
         self.variables.delete_scope();
 
         Ok(())
