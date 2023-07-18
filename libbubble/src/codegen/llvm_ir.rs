@@ -321,11 +321,14 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
 
     fn visit_while(&mut self, stmt: &'ast WhileStatement) -> Result<(), Infallible> {
         let parent = self.current_fn_value.unwrap();
-        let zero_const = self.context.i64_type().const_zero();
+        let zero_const = self.context.bool_type().const_zero();
 
-        let while_block = self.context.append_basic_block(parent, "while");
+        let condition_block = self.context.append_basic_block(parent, "while_test");
+        let while_block = self.context.append_basic_block(parent, "while_body");
         let after_while_block = self.context.append_basic_block(parent, "after_while");
-        self.builder.position_at_end(while_block);
+
+        self.builder.build_unconditional_branch(condition_block);
+        self.builder.position_at_end(condition_block);
         self.visit_expression(&stmt.condition)?;
 
         let condition = self.builder.build_int_compare(
@@ -336,13 +339,17 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         );
         self.builder
             .build_conditional_branch(condition, while_block, after_while_block);
+
+        self.builder.position_at_end(while_block);
         self.visit_statements(&stmt.body)?;
-        self.builder.build_unconditional_branch(while_block); // Loop
+        self.builder.build_unconditional_branch(condition_block); // Loop
+
+        self.builder.position_at_end(after_while_block);
 
         Ok(())
     }
 
-    fn visit_for(&mut self, stmt: &'ast ForStatement) -> Result<(), Infallible> {
+    fn visit_for(&mut self, _stmt: &'ast ForStatement) -> Result<(), Infallible> {
         todo!("for desugar")
     }
 
@@ -368,8 +375,8 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         Ok(())
     }
 
-    fn visit_break(&mut self, stmt: &'ast BreakStatement) -> Result<(), Infallible> {
-        todo!()
+    fn visit_break(&mut self, _stmt: &'ast BreakStatement) -> Result<(), Infallible> {
+        todo!("implement break")
     }
 
     fn visit_binary_operation(&mut self, expr: &'ast BinaryOperation) -> Result<(), Infallible> {

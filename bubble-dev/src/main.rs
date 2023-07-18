@@ -26,10 +26,11 @@ pub fn parse_global_statements_input(code: &str) -> StatementsParserResult<Vec<G
 
 fn main() {
     let mut stmts = parse_global_statements_input(
-        r#"    extern function puts(str: string): i32;
-
+        r#"extern function puts(msg: string): i32;
     function main(): i64 {
-        puts("Hello, World!");
+        while true {
+            puts("hey");
+        }
         return 0;
 }"#,
     )

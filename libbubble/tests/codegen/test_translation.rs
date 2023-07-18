@@ -1,4 +1,7 @@
-use std::process::Command;
+use std::{
+    io::Read,
+    process::{Command, Stdio},
+};
 
 use rstest::rstest;
 
@@ -114,4 +117,43 @@ fn test_translation(
         .status()
         .expect("Failed to invoke executable");
     assert_eq!(result.code().unwrap(), expected_return_code);
+}
+
+#[rstest]
+#[case::while_loop_five_times(
+    r#"extern function puts(msg: string): i32;
+    function main(): i64 {
+        let a: i64 = 0;
+        while a < 5 {
+            puts("hey");
+            a = a + 1;
+        }
+        return 0;
+}"#,
+    "/tmp/while_loop_five_times",
+    0,
+    "hey\nhey\nhey\nhey\nhey\n"
+)]
+fn test_translation_with_stdout(
+    #[case] code: &str,
+    #[case] executable_path: &str,
+    #[case] expected_return_code: i32,
+    #[case] expected_stdout: &str,
+) {
+    build_and_link(code, &format!("{}.o", executable_path), executable_path);
+
+    let mut cmd = Command::new(executable_path)
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to spawn task");
+
+    let mut read_string = String::new();
+    let mut stdout = cmd.stdout.take().expect("Failed to get executable stdout");
+    let result = cmd.wait().expect("Failed to wait child process");
+    stdout
+        .read_to_string(&mut read_string)
+        .expect("Failed to read stdout");
+
+    assert_eq!(result.code().unwrap(), expected_return_code);
+    assert_eq!(read_string, expected_stdout);
 }

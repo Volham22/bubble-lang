@@ -1,6 +1,7 @@
 use super::{
     bindable::Definition,
-    location::{Locatable, TokenLocation}, impl_locatable,
+    impl_locatable,
+    location::{Locatable, TokenLocation},
 };
 
 #[derive(Debug, Clone)]
