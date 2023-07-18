@@ -513,19 +513,19 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
 
     fn visit_literal(&mut self, stmt: &'ast Literal) -> Result<(), Infallible> {
         match &stmt.literal_type {
-            crate::ast::LiteralType::True => {
+            LiteralType::True => {
                 self.current_value = Some(self.context.bool_type().const_int(1, false).into());
             }
-            crate::ast::LiteralType::False => {
+            LiteralType::False => {
                 self.current_value = Some(self.context.bool_type().const_zero().into());
             }
-            crate::ast::LiteralType::Integer(x) => {
+            LiteralType::Integer(x) => {
                 self.current_value = Some(self.context.i64_type().const_int(*x as u64, true).into())
             }
-            crate::ast::LiteralType::Float(x) => {
+            LiteralType::Float(x) => {
                 self.current_value = Some(self.context.f64_type().const_float(*x).into())
             }
-            crate::ast::LiteralType::Identifier(id) => {
+            LiteralType::Identifier(id) => {
                 let ptr = self
                     .variables
                     .get(id.as_str())
@@ -539,6 +539,12 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                             "load",
                         )
                         .as_any_value_enum(),
+                );
+            }
+            LiteralType::String(content) => {
+                self.current_value = Some(
+                    self.builder
+                        .build_global_string_ptr(content.as_str(), "string_literal").as_any_value_enum(),
                 );
             }
         }

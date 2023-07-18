@@ -222,6 +222,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
             super::LiteralType::Integer(n) => self.write(&n.to_string()),
             super::LiteralType::Float(f) => self.write(&f.to_string()),
             super::LiteralType::Identifier(id) => self.write(id),
+            super::LiteralType::String(content) => self.write(&format!("\"{}\"", content)),
         }
     }
 

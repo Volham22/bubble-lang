@@ -32,8 +32,11 @@ use rstest::rstest;
 #[case::true_kw("true true", &[Token::True, Token::True])]
 #[case::true_kw("false false", &[Token::False, Token::False])]
 #[case::for_kw("for for", &[Token::For, Token::For])]
-#[case::type_unsigned("u8 u16 u32 u64", &[Token::U8, Token::U16, Token::U32, Token::U64])]
-#[case::type_unsigned("i8 i16 i32 i64", &[Token::I8, Token::I16, Token::I32, Token::I64])]
+#[case::type_unsigned("u8 u16 u32 u64", &[Token::U8Ty, Token::U16Ty, Token::U32Ty, Token::U64Ty])]
+#[case::type_unsigned("i8 i16 i32 i64", &[Token::I8Ty, Token::I16Ty, Token::I32Ty, Token::I64Ty])]
+#[case::type_string("string", &[Token::StringTy])]
+#[case::type_bool("bool", &[Token::BoolTy])]
+#[case::case_string_literal(r#""Salut les amis""#, &[Token::String("Salut les amis".to_string())])]
 #[case::identifier("my_var", &[Token::Identifier("my_var".to_string())])]
 #[case::integer("42", &[Token::Integer(42)])]
 #[case::integer_too_big(

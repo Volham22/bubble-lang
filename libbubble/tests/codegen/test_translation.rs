@@ -73,6 +73,14 @@ use crate::assets::build_and_link;
     "/tmp/assign_variable",
     0
 )]
+#[case::let_string_variable(
+    r#"function main(): i32 {
+        let a = "salut";
+        return 0;
+}"#,
+    "/tmp/let_string_variable",
+    0
+)]
 #[case::main_return_void(r#"function main() { return; }"#, "/tmp/return_void", 0)]
 fn test_translation(
     #[case] code: &str,

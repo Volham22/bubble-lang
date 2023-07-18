@@ -79,6 +79,13 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::string_literal_variable_init(
+    r#"
+    function f() {
+        let var = "salut";
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

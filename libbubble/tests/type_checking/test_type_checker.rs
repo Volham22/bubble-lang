@@ -105,6 +105,35 @@ use crate::assets::run_type_checker;
     }
 "#
 )]
+#[case::let_string_type_infer(
+    r#"
+    function f() {
+        let a = "hey";
+    }
+"#
+)]
+#[case::let_string_type_hint(
+    r#"
+    function f() {
+        let a: string = "hey";
+    }
+"#
+)]
+#[case::function_return_string(
+    r#"
+    function f(): string {
+        return "hey";
+    }
+"#
+)]
+#[case::function_return_variable_string(
+    r#"
+    function f(): string {
+        let a: string = "hey";
+        return a;
+    }
+"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -235,6 +264,31 @@ fn type_checker_valid(#[case] code: &str) {
        }
    "#,
     TypeCheckerError::ReturnTypeMismatch { got: type_system::Type::Int, expected: type_system::Type::Float }
+)]
+#[case::let_string_type_hint_bad_init(
+    r#"
+       function f() {
+           let s: string = 32;
+       }
+   "#,
+    TypeCheckerError::BadInit { left: type_system::Type::String, right: type_system::Type::Int }
+)]
+#[case::string_bad_type_assign(
+    r#"
+       function f() {
+           let s: string = "salut";
+           s = 32;
+       }
+   "#,
+    TypeCheckerError::BadAssigment { left: type_system::Type::String, right: type_system::Type::Int }
+)]
+#[case::bad_return_type_string(
+    r#"
+       function f(): i32 {
+           return "hello";
+       }
+   "#,
+    TypeCheckerError::ReturnTypeMismatch { got: type_system::Type::String, expected: type_system::Type::I32 }
 )]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);

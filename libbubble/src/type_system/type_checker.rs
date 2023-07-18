@@ -374,6 +374,10 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 self.current_type = Some(Type::Float);
                 Ok(())
             }
+            LiteralType::String(_) => {
+                self.current_type = Some(Type::String);
+                Ok(())
+            }
             LiteralType::Identifier(_) => {
                 // FIXME: This is ugly and should not be written this way. We're
                 // cloning here to trick the borrow checker and do mutable accept
