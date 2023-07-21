@@ -28,8 +28,10 @@ fn main() {
     let mut stmts = parse_global_statements_input(
         r#"extern function puts(msg: string): i32;
     function main(): i64 {
-        while true {
+        let i: i64 = 0;
+        while i < 10 {
             puts("hey");
+            i = i + 1;
         }
         return 0;
 }"#,
@@ -63,19 +65,13 @@ fn main() {
         .write_to_file(&module, FileType::Object, Path::new("/tmp/test.o"))
         .expect("Failed to build object file");
 
-    let status_code = Command::new("ld")
-        .arg("-m")
-        .arg("elf_x86_64")
+    let status_code = Command::new("clang")
         .arg("/tmp/test.o")
-        .arg("/lib64/crt1.o") // C runtime
-        .arg("-lc") // Link Lib C
-        // Use ld-linux-* this is needed because we're linking against the C library
-        .arg("-dynamic-linker")
-        .arg("/lib64/ld-linux-x86-64.so.2")
+        .arg("-fPIE")
         .arg("-o")
         .arg("test")
         .status()
-        .expect("Failed to invoke ld");
+        .expect("Failed to invoke clang");
 
     assert!(
         status_code.success(),

@@ -77,7 +77,9 @@ pub fn build_and_link(code: &str, outname: &str, executable_name: &str) {
         .arg("-m")
         .arg("elf_x86_64")
         .arg(outname)
-        .arg("/lib64/crt1.o") // C runtime
+        .arg("/usr/lib64/crt1.o") // C runtime
+        .arg("/usr/lib64/crti.o") // C runtime
+        .arg("/usr/lib64/crtn.o") // C runtime
         .arg("-lc") // Link Lib C
         // Use ld-linux-* this is needed because we're linking against the C library
         .arg("-dynamic-linker")
