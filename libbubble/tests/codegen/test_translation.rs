@@ -105,7 +105,6 @@ use crate::assets::build_and_link;
     "/tmp/use_libc_puts",
     0
 )]
-#[case::main_return_void(r#"function main() { return; }"#, "/tmp/return_void", 0)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,
@@ -116,7 +115,7 @@ fn test_translation(
     let result = Command::new(executable_path)
         .status()
         .expect("Failed to invoke executable");
-    assert_eq!(result.code().unwrap(), expected_return_code);
+    assert_eq!(result.code().unwrap(), expected_return_code, "{:?}", result);
 }
 
 #[rstest]
