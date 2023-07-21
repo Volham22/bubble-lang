@@ -107,6 +107,7 @@ pub enum LiteralType {
     Integer(i64),
     Float(f64),
     Identifier(String),
+    String(String),
 }
 
 #[derive(Debug, Copy, Clone)]

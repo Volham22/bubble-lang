@@ -21,7 +21,8 @@ pub struct FunctionStatement {
     pub name: String,
     pub parameters: Vec<FunctionParameter>,
     pub return_type: TypeKind,
-    pub body: Statements,
+    pub is_extern: bool,
+    pub body: Option<Statements>,
     location: TokenLocation,
     pub(crate) ty: Option<type_system::Type>,
 }
@@ -33,12 +34,14 @@ impl FunctionStatement {
         name: String,
         parameters: Vec<FunctionParameter>,
         return_type: TypeKind,
-        body: Statements,
+        is_extern: bool,
+        body: Option<Statements>,
     ) -> Self {
         Self {
             name,
             parameters,
             return_type,
+            is_extern,
             body,
             location: TokenLocation::new(tk_begin, tk_end),
             ty: None,
@@ -75,12 +78,12 @@ impl LetStatement {
 
 #[derive(Debug, Clone)]
 pub struct ReturnStatement {
-    pub exp: Box<Expression>,
+    pub exp: Option<Box<Expression>>,
     location: TokenLocation,
 }
 
 impl ReturnStatement {
-    pub fn new(begin_tk: usize, end_tk: usize, exp: Box<Expression>) -> Self {
+    pub fn new(begin_tk: usize, end_tk: usize, exp: Option<Box<Expression>>) -> Self {
         Self {
             exp,
             location: TokenLocation::new(begin_tk, end_tk),

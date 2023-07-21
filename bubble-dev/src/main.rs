@@ -1,47 +1,81 @@
+use std::{path::Path, process::Command};
+
+use inkwell::{
+    context::Context,
+    targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
+    OptimizationLevel,
+};
 use libbubble::{
-    ast,
-    parser::{grammar::GlobalStatementsParser, lexer::Lexer},
-    type_system,
+    ast::GlobalStatement,
+    codegen::build_module,
+    parser::{
+        grammar::GlobalStatementsParser,
+        lexer::{Lexer, LexicalError, Token},
+    },
+    type_system::{binder::Binder, type_checker::TypeChecker},
 };
 
-fn main() {
-    let lexer = Lexer::new(
-        r#"
-    function g(a: u32, b: bool): i32 {
-        let n = 32;
+pub type StatementsParserResult<T> =
+    Result<T, lalrpop_util::ParseError<usize, Token, LexicalError>>;
 
-        while n > 21 {
-            32
-        }
-
-        return n;
-    }
-
-    function f(): u64 {
-        let n = 42;
-        return n;
-    }
-"#,
-    );
+pub fn parse_global_statements_input(code: &str) -> StatementsParserResult<Vec<GlobalStatement>> {
+    let lexer = Lexer::new(code);
     let parser = GlobalStatementsParser::new();
+    parser.parse(lexer)
+}
 
-    match parser.parse(lexer) {
-        Ok(mut stmts) => {
-            let mut printer = ast::Printer::default();
-            let mut binder = type_system::binder::Binder::default();
-            let mut type_checker = type_system::type_checker::TypeChecker::default();
-            let mut renamer = type_system::Renamer::default();
-            binder.bind_statements(&mut stmts).expect("binder failed");
-            type_checker
-                .check_statements(&mut stmts)
-                .expect("type checker failed");
-            renamer
-                .rename_statements(&mut stmts)
-                .expect("renamer failed");
-            printer.print(stmts).expect("write to stdio failed");
+fn main() {
+    let mut stmts = parse_global_statements_input(
+        r#"extern function puts(msg: string): i32;
+    function main(): i64 {
+        let i: i64 = 0;
+        while i < 10 {
+            puts("hey");
+            i = i + 1;
         }
-        Err(err) => {
-            eprintln!("{err:?}");
-        }
-    }
+        return 0;
+}"#,
+    )
+    .expect("Failed to parse code");
+    let mut binder = Binder::default();
+    let mut type_checker = TypeChecker::default();
+    binder.bind_statements(&mut stmts).expect("Binder failed");
+    type_checker
+        .check_statements(&mut stmts)
+        .expect("Type checker failed");
+
+    let context = Context::create();
+    let module = context.create_module("module");
+
+    build_module(&context, &module, &stmts);
+    Target::initialize_x86(&InitializationConfig::default());
+    let target = Target::from_name("x86-64").unwrap();
+    let target_machine = target
+        .create_target_machine(
+            &TargetMachine::get_default_triple(),
+            "x86-64",
+            "",
+            OptimizationLevel::None,
+            RelocMode::Default,
+            CodeModel::Default,
+        )
+        .unwrap();
+
+    target_machine
+        .write_to_file(&module, FileType::Object, Path::new("/tmp/test.o"))
+        .expect("Failed to build object file");
+
+    let status_code = Command::new("clang")
+        .arg("/tmp/test.o")
+        .arg("-fPIE")
+        .arg("-o")
+        .arg("test")
+        .status()
+        .expect("Failed to invoke clang");
+
+    assert!(
+        status_code.success(),
+        "ld failed with the following code: {:?}",
+        status_code
+    );
 }

@@ -23,6 +23,27 @@ impl<'input> Lexer<'input> {
     }
 }
 
+/// Walks the source code until an other " is reached.
+/// Then bump the lexer to second " location to resume lexing
+/// it acts likes Flex sublexer
+fn handle_quote(lex: &mut logos::Lexer<Token>) -> Result<String, ()> {
+    let mut inner_content: Vec<char> = Vec::new();
+    let remainder_string = lex.remainder();
+
+    for chr in remainder_string.chars() {
+        if chr == '"' {
+            // Bump to the literal's size + 1 to skip the closing quote
+            lex.bump(inner_content.len() + 1);
+            return Ok(inner_content.iter().collect());
+        }
+
+        inner_content.push(chr);
+    }
+
+    eprint!("Error: Unclosed string literal.");
+    Err(())
+}
+
 #[derive(Logos, Debug, PartialEq, Clone)]
 pub enum Token {
     // Syntax elements
@@ -102,6 +123,8 @@ pub enum Token {
     True,
     #[token("false")]
     False,
+    #[token("extern")]
+    Extern,
 
     // =================
     //       Types
@@ -109,31 +132,31 @@ pub enum Token {
 
     // unsigned integers type
     #[token("u8")]
-    U8,
+    U8Ty,
     #[token("u16")]
-    U16,
+    U16Ty,
     #[token("u32")]
-    U32,
+    U32Ty,
     #[token("u64")]
-    U64,
+    U64Ty,
 
     // signed integer type
     #[token("i8")]
-    I8,
+    I8Ty,
     #[token("i16")]
-    I16,
+    I16Ty,
     #[token("i32")]
-    I32,
+    I32Ty,
     #[token("i64")]
-    I64,
+    I64Ty,
 
     // Bool, string and void
     #[token("bool")]
-    Bool,
+    BoolTy,
     #[token("string")]
-    String,
+    StringTy,
     #[token("void")]
-    Void,
+    VoidTy,
 
     // Literals
     #[regex(r"[a-zA-Z][a-zA-Z0-9_]*", |lex| lex.slice().parse())]
@@ -142,6 +165,8 @@ pub enum Token {
     Real(f64),
     #[regex(r"[1-9]+[0-9]*|0", |lex| lex.slice().parse())]
     Integer(i64),
+    #[token("\"", handle_quote)]
+    String(String),
 
     #[error]
     #[regex(r"[ \r\t\v\r\n]", logos::skip)]

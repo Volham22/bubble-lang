@@ -1,5 +1,6 @@
 use super::{
     bindable::Definition,
+    impl_locatable,
     location::{Locatable, TokenLocation},
 };
 
@@ -20,12 +21,6 @@ impl Type {
     }
 }
 
-impl Locatable for Type {
-    fn get_location(&self) -> &TokenLocation {
-        &self.location
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeKind {
     U8,
@@ -42,3 +37,5 @@ pub enum TypeKind {
     Identifier(String),
     Void,
 }
+
+impl_locatable!(Type);

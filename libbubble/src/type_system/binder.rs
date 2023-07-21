@@ -72,35 +72,38 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         &mut self,
         stmt: &'ast mut FunctionStatement,
     ) -> Result<(), BinderError<'ast>> {
-        self.local_variables.new_scope();
         let location = stmt.get_location();
-
-        // We treat functions parameters as simple declarations as it'll simplify the rest of our
-        // implementation.
-        // TODO: Investigate if it's possible to do it directly in the ast
-        for (kind, parameter_name) in &stmt.parameters {
-            self.local_variables.insert_symbol(
-                parameter_name,
-                LetStatement::new(
-                    location.begin,
-                    location.end,
-                    parameter_name.to_string(),
-                    Some(kind.clone()),
-                    Box::new(Expression::Literal(Literal::new(
-                        location.begin,
-                        location.end,
-                        crate::ast::LiteralType::True,
-                    ))),
-                ),
-            );
-        }
 
         self.functions_statements
             .insert(stmt.name.to_string(), stmt.clone());
-        self.in_function = true;
-        self.visit_statements(&mut stmt.body)?;
-        self.in_function = false;
-        self.local_variables.delete_scope();
+
+        if !stmt.is_extern {
+            self.local_variables.new_scope();
+            // We treat functions parameters as simple declarations as it'll simplify the rest of our
+            // implementation.
+            // TODO: Investigate if it's possible to do it directly in the ast
+            for (kind, parameter_name) in &stmt.parameters {
+                self.local_variables.insert_symbol(
+                    parameter_name,
+                    LetStatement::new(
+                        location.begin,
+                        location.end,
+                        parameter_name.to_string(),
+                        Some(kind.clone()),
+                        Box::new(Expression::Literal(Literal::new(
+                            location.begin,
+                            location.end,
+                            crate::ast::LiteralType::True,
+                        ))),
+                    ),
+                );
+            }
+
+            self.in_function = true;
+            self.visit_statements(stmt.body.as_mut().unwrap())?;
+            self.in_function = false;
+            self.local_variables.delete_scope();
+        }
 
         Ok(())
     }
@@ -167,7 +170,10 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
                 location: stmt.get_location(),
             })
         } else {
-            self.visit_expression(&mut stmt.exp)?;
+            if let Some(ref mut exp) = stmt.exp {
+                self.visit_expression(exp)?;
+            }
+
             Ok(())
         }
     }

@@ -75,7 +75,9 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         self.write(" {")?;
         self.indent_and_newline()?;
 
-        self.visit_statements_vec(&stmt.body.statements)?;
+        if let Some(body) = &stmt.body {
+            self.visit_statements(body)?;
+        }
 
         self.dec_indent_and_newline()?;
         self.write("}\n")?;
@@ -172,7 +174,11 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
 
     fn visit_return(&mut self, stmt: &ReturnStatement) -> PrinterResult {
         self.write("return ")?;
-        self.visit_expression(&stmt.exp)?;
+
+        if let Some(ref exp) = stmt.exp {
+            self.visit_expression(exp)?;
+        }
+
         self.write(";")
     }
 
@@ -218,6 +224,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
             super::LiteralType::Integer(n) => self.write(&n.to_string()),
             super::LiteralType::Float(f) => self.write(&f.to_string()),
             super::LiteralType::Identifier(id) => self.write(id),
+            super::LiteralType::String(content) => self.write(&format!("\"{}\"", content)),
         }
     }
 
