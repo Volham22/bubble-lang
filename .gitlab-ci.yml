@@ -4,7 +4,7 @@ stages:
   - tests
   - deploy
 
-image: rust:1.68-buster
+image: volham/bubble-ci:latest
 
 compiler-build:
   stage: build
@@ -16,13 +16,11 @@ compiler-build:
 coding-style:
   stage: checks
   script:
-    - rustup component add rustfmt
     - cargo fmt --check
 
 clippy:
   stage: checks
   script:
-    - rustup component add clippy
     - cargo clippy -- -Dwarnings
   dependencies:
     - compiler-build
