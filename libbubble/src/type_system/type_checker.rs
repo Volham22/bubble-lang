@@ -5,10 +5,21 @@ use thiserror::Error;
 use crate::ast::{
     Assignment, BinaryOperation, Bindable, Call, Definition, Expression, ForStatement,
     FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType,
-    MutableVisitor, OpType, ReturnStatement, StructStatement, WhileStatement,
+    MutableVisitor, OpType, ReturnStatement, StructStatement, TokenLocation, WhileStatement,
 };
 
-use super::{Typable, Type};
+use super::{inference::IntegerInference, Typable, Type};
+
+pub fn run_type_checker(stmts: &mut [GlobalStatement]) -> Result<(), TypeCheckerError> {
+    let mut type_checker = TypeChecker::default();
+    let mut int_inference = IntegerInference::default();
+
+    type_checker.check_statements(stmts)?;
+    int_inference.infer_statements(stmts)?;
+
+    // type_checker.check_statements(stmts)
+    Ok(())
+}
 
 #[derive(Error, Debug)]
 pub enum TypeCheckerError {
@@ -36,6 +47,8 @@ pub enum TypeCheckerError {
     },
     #[error("Function return type is {expected:?} but a {got:?} type is returned")]
     ReturnTypeMismatch { got: Type, expected: Type },
+    #[error("Can't infer a proper type to the variable. Please, add a type annotation")]
+    InferenceError(TokenLocation),
 }
 
 impl PartialEq for TypeCheckerError {
@@ -366,19 +379,19 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
         match literal.literal_type {
             LiteralType::True | LiteralType::False => {
                 self.current_type = Some(Type::Bool);
-                Ok(())
+                literal.set_type(Type::Bool);
             }
             LiteralType::Integer(_) => {
                 self.current_type = Some(Type::Int);
-                Ok(())
+                literal.set_type(Type::Int);
             }
             LiteralType::Float(_) => {
                 self.current_type = Some(Type::Float);
-                Ok(())
+                literal.set_type(Type::Float);
             }
             LiteralType::String(_) => {
                 self.current_type = Some(Type::String);
-                Ok(())
+                literal.set_type(Type::String);
             }
             LiteralType::Identifier(_) => {
                 // FIXME: This is ugly and should not be written this way. We're
@@ -387,20 +400,19 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     Definition::Struct(ref mut strct) => {
                         self.visit_struct(strct)?;
                         literal.set_type(self.current_type.as_ref().unwrap().clone());
-                        Ok(())
                     }
                     Definition::LocalVariable(ref mut v) => {
                         self.visit_let(v)?;
                         literal.set_type(self.current_type.as_ref().unwrap().clone());
-                        Ok(())
                     }
                     Definition::Function(ref mut f) => {
                         self.visit_function(f)?;
                         literal.set_type(self.current_type.as_ref().unwrap().clone());
-                        Ok(())
                     }
                 }
             }
-        }
+        };
+
+        Ok(())
     }
 }

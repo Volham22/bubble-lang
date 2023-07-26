@@ -12,7 +12,7 @@ use libbubble::{
         grammar::GlobalStatementsParser,
         lexer::{Lexer, LexicalError, Token},
     },
-    type_system::{binder::Binder, type_checker::TypeChecker},
+    type_system::{binder::Binder, run_type_checker, },
 };
 
 pub type StatementsParserResult<T> =
@@ -32,11 +32,8 @@ fn main() {
     let source_code = read_file_to_string(Path::new("test.blb"));
     let mut stmts = parse_global_statements_input(&source_code).expect("Failed to parse code");
     let mut binder = Binder::default();
-    let mut type_checker = TypeChecker::default();
     binder.bind_statements(&mut stmts).expect("Binder failed");
-    type_checker
-        .check_statements(&mut stmts)
-        .expect("Type checker failed");
+    run_type_checker(&mut stmts).expect("Type checker failed");
 
     let context = Context::create();
     let module = context.create_module("module");

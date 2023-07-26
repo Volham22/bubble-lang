@@ -1,6 +1,6 @@
 use libbubble::{
     ast,
-    type_system::{self, type_checker::TypeCheckerError},
+    type_system::{self, TypeCheckerError},
 };
 use rstest::rstest;
 

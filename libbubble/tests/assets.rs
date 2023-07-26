@@ -12,10 +12,7 @@ use libbubble::{
         grammar::{GlobalStatementsParser, StatementsParser},
         lexer::{Lexer, LexicalError, Token},
     },
-    type_system::{
-        binder::*,
-        type_checker::{TypeChecker, TypeCheckerError},
-    },
+    type_system::{binder::*, run_type_checker as type_check, TypeCheckerError},
 };
 
 const LD_LOADER_PATH: &str = "/lib64/ld-linux-x86-64.so.2";
@@ -38,19 +35,15 @@ pub fn parse_global_statements_input(code: &str) -> StatementsParserResult<Vec<G
 pub fn run_type_checker(code: &str) -> Result<(), TypeCheckerError> {
     let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
     let mut binder = Binder::default();
-    let mut type_checker = TypeChecker::default();
     binder.bind_statements(&mut stmts).expect("Binder failed");
-    type_checker.check_statements(&mut stmts)
+    type_check(&mut stmts)
 }
 
 pub fn build_and_link(code: &str, outname: &str, executable_name: &str) {
     let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
     let mut binder = Binder::default();
-    let mut type_checker = TypeChecker::default();
     binder.bind_statements(&mut stmts).expect("Binder failed");
-    type_checker
-        .check_statements(&mut stmts)
-        .expect("Type checker failed");
+    type_check(&mut stmts).expect("Type checker failed");
 
     let context = Context::create();
     let module = context.create_module("module");
