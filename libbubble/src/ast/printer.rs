@@ -63,10 +63,15 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         self.write(&stmt.name)?;
 
         self.write("(")?;
-        for (kind, name) in &stmt.parameters {
-            self.write(name)?;
+        for param_stmt in &stmt.parameters {
+            self.write(&param_stmt.name)?;
             self.write(":")?;
-            self.visit_type_kind(kind)?;
+            self.visit_type_kind(
+                param_stmt
+                    .declaration_type
+                    .as_ref()
+                    .expect("Function parameter has no type hint!"),
+            )?;
             self.write(", ")?;
         }
         self.write("): ")?;
@@ -108,7 +113,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         }
 
         self.write(" = ")?;
-        self.visit_expression(&stmt.init_exp)?;
+        self.visit_expression(stmt.init_exp.as_ref().unwrap())?;
         self.write(";\n")?;
 
         Ok(())

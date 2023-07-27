@@ -128,11 +128,22 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
         &mut self,
         stmt: &'ast mut FunctionStatement,
     ) -> Result<(), TypeCheckerError> {
+        // Set parameters type
+        println!("Type set!");
+        for parameter in stmt.parameters.iter_mut() {
+            parameter.set_type(Type::from(
+                parameter
+                    .declaration_type
+                    .clone()
+                    .expect("Parameter has no type hint!"),
+            ))
+        }
+
         let function_type = Type::Function {
             parameters: stmt
                 .parameters
                 .iter()
-                .map(|(kind, name)| (Type::from(kind.clone()), name.clone()))
+                .map(|let_stmt| (let_stmt.get_type().clone(), let_stmt.name.clone()))
                 .collect(),
             return_type: Box::new(stmt.return_type.clone().into()),
         };
@@ -192,7 +203,11 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
     }
 
     fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), TypeCheckerError> {
-        self.visit_expression(&mut stmt.init_exp)?;
+        self.visit_expression(
+            stmt.init_exp
+                .as_mut()
+                .expect("Let statement has no init exp!"),
+        )?;
 
         match &stmt.declaration_type {
             Some(ty) => {
@@ -273,29 +288,37 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), TypeCheckerError> {
-        let fn_ty = expr.get_definition().clone();
-
-        if let Definition::Function(ty) = fn_ty {
-            if expr.arguments.len() != ty.parameters.len() {
+        if expr.get_definition().is_function() {
+            if expr.arguments.len() != expr.get_function_def().parameters.len() {
                 return Err(TypeCheckerError::BadParameterCount {
-                    expected: ty.parameters.len() as u32,
+                    expected: expr.get_function_def().parameters.len() as u32,
                     got: expr.arguments.len() as u32,
                 });
             }
 
-            for (i, expr) in expr.arguments.iter_mut().enumerate() {
-                self.visit_expression(expr)?;
-                let (expected_type_kind, name) = ty.parameters.get(i).unwrap();
-                let expected_type: Type = expected_type_kind.clone().into();
+            // Add parameters types to a vector
+            let mut parameter_types = Vec::with_capacity(expr.get_function_def().parameters.len());
+            for param_expr in expr.arguments.iter_mut() {
+                self.visit_expression(param_expr)?;
+                parameter_types.push(
+                    self.current_type
+                        .clone()
+                        .expect("Parameter expression should be typed"),
+                );
+            }
 
-                if !self
-                    .current_type
-                    .as_ref()
-                    .expect("No type in function parameter")
-                    .is_compatible_with(&expected_type)
-                {
+            for (expr_type, function_parameter) in parameter_types
+                .iter()
+                .zip(expr.get_function_def().parameters.iter())
+            {
+                let expected_type = function_parameter
+                    .ty
+                    .clone()
+                    .expect("Parameter should be typed");
+
+                if !expr_type.is_compatible_with(&expected_type) {
                     return Err(TypeCheckerError::BadParameter {
-                        name: name.clone(),
+                        name: function_parameter.name.clone(),
                         expected_type,
                         got: self.current_type.clone().unwrap(),
                     });
@@ -304,7 +327,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
 
             Ok(())
         } else {
-            Err(TypeCheckerError::NotCallable(fn_ty))
+            Err(TypeCheckerError::NotCallable(expr.get_definition().clone()))
         }
     }
 
@@ -397,17 +420,20 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 // FIXME: This is ugly and should not be written this way. We're
                 // cloning here to trick the borrow checker and do mutable accept
                 match literal.get_definition().clone() {
-                    Definition::Struct(ref mut strct) => {
-                        self.visit_struct(strct)?;
-                        literal.set_type(self.current_type.as_ref().unwrap().clone());
+                    Definition::Struct(_) => {
+                        let strct = literal.get_struct_def();
+                        // self.visit_struct(strct)?;
+                        self.current_type = Some(strct.get_type().clone());
+                        literal.set_type(strct.get_type().clone());
                     }
-                    Definition::LocalVariable(ref mut v) => {
-                        self.visit_let(v)?;
-                        literal.set_type(self.current_type.as_ref().unwrap().clone());
+                    Definition::LocalVariable(_) => {
+                        self.current_type =
+                            Some(literal.get_local_variable_def().get_type().clone());
+                        literal.set_type(literal.get_local_variable_def().get_type().clone());
                     }
-                    Definition::Function(ref mut f) => {
-                        self.visit_function(f)?;
-                        literal.set_type(self.current_type.as_ref().unwrap().clone());
+                    Definition::Function(_) => {
+                        self.current_type = Some(literal.get_function_def().get_type().clone());
+                        literal.set_type(literal.get_function_def().get_type().clone());
                     }
                 }
             }

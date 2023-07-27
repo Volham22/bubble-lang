@@ -1,4 +1,6 @@
-use crate::ast::{self, FunctionStatement, LetStatement, Literal, StructStatement};
+use crate::ast::{
+    self, BinaryOperation, Call, FunctionStatement, LetStatement, Literal, StructStatement, Assignment,
+};
 
 pub type FunctionParameter = (Type, String);
 
@@ -80,6 +82,10 @@ impl Type {
                 | Type::Int
         )
     }
+
+    pub fn is_signed(&self) -> bool {
+        matches!(self, Type::I8 | Type::I16 | Type::I32 | Type::I64)
+    }
 }
 
 impl From<ast::TypeKind> for Type {
@@ -126,4 +132,12 @@ macro_rules! impl_typables {
     };
 }
 
-impl_typables!(FunctionStatement, LetStatement, StructStatement, Literal);
+impl_typables!(
+    Assignment,
+    BinaryOperation,
+    Call,
+    FunctionStatement,
+    LetStatement,
+    Literal,
+    StructStatement
+);

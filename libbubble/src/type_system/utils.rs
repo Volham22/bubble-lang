@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 
-use crate::ast::Locatable;
-
 pub type Scope<T> = HashMap<String, T>;
-pub struct ScopedMap<T: Locatable>(Vec<Scope<T>>);
+pub struct ScopedMap<T>(Vec<Scope<T>>);
 
-impl<T: Locatable> Default for ScopedMap<T> {
+impl<T> Default for ScopedMap<T> {
     /// Creates a default ScopedMap.
     /// Note: Every ScopedMap has a default scope
     fn default() -> Self {
@@ -13,7 +11,7 @@ impl<T: Locatable> Default for ScopedMap<T> {
     }
 }
 
-impl<T: Locatable> ScopedMap<T> {
+impl<T> ScopedMap<T> {
     pub fn new_scope(&mut self) {
         self.0.push(Scope::new());
     }
@@ -61,11 +59,11 @@ mod tests {
                 0,
                 "a".to_string(),
                 None,
-                Box::new(ast::Expression::Literal(ast::Literal::new(
+                Some(Box::new(ast::Expression::Literal(ast::Literal::new(
                     0,
                     0,
                     ast::LiteralType::True,
-                ))),
+                )))),
             ),
         );
         let a = def.find_symbol("a");
@@ -82,11 +80,11 @@ mod tests {
                 0,
                 "a".to_string(),
                 None,
-                Box::new(ast::Expression::Literal(ast::Literal::new(
+                Some(Box::new(ast::Expression::Literal(ast::Literal::new(
                     0,
                     0,
                     ast::LiteralType::True,
-                ))),
+                )))),
             ),
         );
 
@@ -97,11 +95,11 @@ mod tests {
                 0,
                 "b".to_string(),
                 None,
-                Box::new(ast::Expression::Literal(ast::Literal::new(
+                Some(Box::new(ast::Expression::Literal(ast::Literal::new(
                     0,
                     0,
                     ast::LiteralType::True,
-                ))),
+                )))),
             ),
         );
 
@@ -121,11 +119,11 @@ mod tests {
                 0,
                 "far".to_string(),
                 None,
-                Box::new(ast::Expression::Literal(ast::Literal::new(
+                Some(Box::new(ast::Expression::Literal(ast::Literal::new(
                     0,
                     0,
                     ast::LiteralType::True,
-                ))),
+                )))),
             ),
         );
 
@@ -139,11 +137,11 @@ mod tests {
                 0,
                 "near".to_string(),
                 None,
-                Box::new(ast::Expression::Literal(ast::Literal::new(
+                Some(Box::new(ast::Expression::Literal(ast::Literal::new(
                     0,
                     0,
                     ast::LiteralType::True,
-                ))),
+                )))),
             ),
         );
 
@@ -161,11 +159,11 @@ mod tests {
                 0,
                 "a".to_string(),
                 None,
-                Box::new(ast::Expression::Literal(ast::Literal::new(
+                Some(Box::new(ast::Expression::Literal(ast::Literal::new(
                     0,
                     0,
                     ast::LiteralType::True,
-                ))),
+                )))),
             ),
         );
         def.new_scope();
@@ -185,11 +183,11 @@ mod tests {
                 0,
                 "a".to_string(),
                 None,
-                Box::new(ast::Expression::Literal(ast::Literal::new(
+                Some(Box::new(ast::Expression::Literal(ast::Literal::new(
                     0,
                     0,
                     ast::LiteralType::True,
-                ))),
+                )))),
             ),
         );
         def.delete_scope();

@@ -1,9 +1,8 @@
 use std::convert::Infallible;
 
 use crate::ast::{
-    Bindable, Definition, Expression, ForStatement, FunctionStatement, GlobalStatement,
-    IfStatement, LetStatement, Literal, LiteralType, Locatable, MutableVisitor, StructStatement,
-    WhileStatement,
+    Bindable, Definition, ForStatement, FunctionStatement, GlobalStatement, IfStatement,
+    LetStatement, Literal, LiteralType, MutableVisitor, StructStatement, WhileStatement,
 };
 
 use super::utils::ScopedMap;
@@ -33,27 +32,13 @@ impl Renamer {
 // compiler passes. Infallible should be replaced by `!` in future Rust's versions
 impl<'ast> MutableVisitor<'ast, Infallible> for Renamer {
     fn visit_function(&mut self, stmt: &mut FunctionStatement) -> Result<(), Infallible> {
-        let location = stmt.get_location().clone();
         self.variables.new_scope();
 
-        // TODO: Function parameters could be let statement.
-        for (kind, parameter_name) in stmt.parameters.iter_mut() {
-            *parameter_name = self.new_symbol(parameter_name); // rename function parameter
+        for param_stmt in stmt.parameters.iter_mut() {
+            param_stmt.name = self.new_symbol(&param_stmt.name); // rename function parameter
 
-            self.variables.insert_symbol(
-                parameter_name,
-                LetStatement::new(
-                    location.begin,
-                    location.end,
-                    parameter_name.to_string(),
-                    Some(kind.clone()),
-                    Box::new(Expression::Literal(Literal::new(
-                        location.begin,
-                        location.end,
-                        crate::ast::LiteralType::True,
-                    ))),
-                ),
-            );
+            self.variables
+                .insert_symbol(&param_stmt.name, param_stmt.clone());
         }
 
         if let Some(body) = stmt.body.as_mut() {
@@ -73,7 +58,7 @@ impl<'ast> MutableVisitor<'ast, Infallible> for Renamer {
     fn visit_let(&mut self, stmt: &mut LetStatement) -> Result<(), Infallible> {
         let prev_name = stmt.name.clone();
         stmt.name = self.new_symbol(&stmt.name);
-        self.visit_expression(&mut stmt.init_exp)?;
+        self.visit_expression(stmt.init_exp.as_mut().expect("Let has no init statement"))?;
         self.variables.insert_symbol(&prev_name, stmt.clone());
 
         Ok(())
@@ -116,15 +101,15 @@ impl<'ast> MutableVisitor<'ast, Infallible> for Renamer {
     }
 
     fn visit_literal(&mut self, literal: &mut Literal) -> Result<(), Infallible> {
-        if let LiteralType::Identifier(ref id) = literal.literal_type {
-            match self.variables.find_symbol(id) {
-                Some(decl) => {
-                    literal.set_definition(Definition::LocalVariable(decl.clone()));
-                    literal.literal_type = LiteralType::Identifier(decl.name.clone());
-                }
-                None => unreachable!("Undeclared symbol in renamer!"),
-            }
-        }
+        // if let LiteralType::Identifier(ref id) = literal.literal_type {
+        //     match self.variables.find_symbol(id) {
+        //         Some(decl) => {
+        //             literal.set_definition(Definition::LocalVariable(decl.clone()));
+        //             literal.literal_type = LiteralType::Identifier(decl.name.clone());
+        //         }
+        //         None => unreachable!("Undeclared symbol in renamer!"),
+        //     }
+        // }
 
         Ok(())
     }

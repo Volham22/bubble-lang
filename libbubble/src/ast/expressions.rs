@@ -19,6 +19,7 @@ pub enum Expression {
 pub struct Assignment {
     pub left: Box<Expression>,
     pub right: Box<Expression>,
+    pub(crate) ty: Option<type_system::Type>,
     location: TokenLocation,
 }
 
@@ -32,6 +33,7 @@ impl Assignment {
         Self {
             left,
             right,
+            ty: None,
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
@@ -42,6 +44,7 @@ pub struct Call {
     pub callee: String,
     pub arguments: Vec<Expression>,
     location: TokenLocation,
+    pub(crate) ty: Option<type_system::Type>,
     pub(crate) definition: Option<Definition>,
 }
 
@@ -51,6 +54,7 @@ impl Call {
             callee,
             arguments,
             location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
             definition: None,
         }
     }
@@ -61,6 +65,7 @@ pub struct BinaryOperation {
     pub left: Box<Expression>,
     pub right: Option<Box<Expression>>,
     pub op: OpType,
+    pub(crate) ty: Option<type_system::Type>,
     location: TokenLocation,
 }
 
@@ -76,6 +81,7 @@ impl BinaryOperation {
             left,
             right,
             op,
+            ty: None,
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
