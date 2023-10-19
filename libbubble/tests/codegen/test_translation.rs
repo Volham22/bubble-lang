@@ -130,7 +130,7 @@ use crate::assets::build_and_link;
     function main(): i32 {
         return f(0);
 }"#,
-    "/tmp/return_i32_expression",
+    "/tmp/parameter_int_type_inference",
     0
 )]
 fn test_translation(
