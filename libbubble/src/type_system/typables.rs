@@ -1,5 +1,6 @@
 use crate::ast::{
-    self, BinaryOperation, Call, FunctionStatement, LetStatement, Literal, StructStatement, Assignment,
+    self, Assignment, BinaryOperation, Call, Expression, FunctionStatement, LetStatement, Literal,
+    StructStatement,
 };
 
 pub type FunctionParameter = (Type, String);
@@ -141,3 +142,19 @@ impl_typables!(
     Literal,
     StructStatement
 );
+
+impl Typable for Expression {
+    fn get_type(&self) -> &Type {
+        match self {
+            Expression::Group(g) => g.get_type(),
+            Expression::BinaryOperation(bo) => bo.get_type(),
+            Expression::Literal(l) => l.get_type(),
+            Expression::Call(c) => c.get_type(),
+            Expression::Assignment(a) => a.get_type(),
+        }
+    }
+
+    fn set_type(&mut self, _: Type) {
+        unreachable!("Cannot set type to an expression directly");
+    }
+}

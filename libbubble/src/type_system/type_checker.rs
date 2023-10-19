@@ -129,7 +129,6 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
         stmt: &'ast mut FunctionStatement,
     ) -> Result<(), TypeCheckerError> {
         // Set parameters type
-        println!("Type set!");
         for parameter in stmt.parameters.iter_mut() {
             parameter.set_type(Type::from(
                 parameter
@@ -348,7 +347,6 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     .current_type
                     .clone()
                     .expect("No Left type in binary operation!");
-                println!("{left_ty:?} {:?}", expr.left);
 
                 self.visit_expression(right_exp)?;
 

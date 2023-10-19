@@ -127,6 +127,44 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
         }
     }
 
+    fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), TypeCheckerError> {
+        if expr.get_definition().is_function() {
+            for i in 0..expr.arguments.len() {
+                self.visit_expression(expr.arguments.get_mut(i).expect("unreachable"))?;
+
+                // Infer only Int type
+                if !self.is_int {
+                    continue;
+                }
+
+                let expected_type = expr
+                    .get_function_def()
+                    .parameters
+                    .get(i)
+                    .unwrap()
+                    .ty
+                    .clone()
+                    .unwrap();
+
+                if !expected_type.is_compatible_with(&Type::Int) {
+                    return Err(TypeCheckerError::BadParameter {
+                        name: expr.get_function_def().name.clone(),
+                        expected_type,
+                        got: Type::Int,
+                    });
+                }
+
+                let mut setter = ExpressionTypeSetter::new(&expected_type);
+                setter.set_type_recusively(expr.arguments.get_mut(i).expect("unreachable"));
+                self.is_int = false;
+            }
+
+            Ok(())
+        } else {
+            Err(TypeCheckerError::NotCallable(expr.get_definition().clone()))
+        }
+    }
+
     fn visit_return(&mut self, stmt: &'ast mut ReturnStatement) -> Result<(), TypeCheckerError> {
         // Do nothing it the return type is `void`. Incompatible return types errors
         // are caught by the actual type checker.
@@ -134,7 +172,6 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
             return Ok(());
         }
 
-        println!("{:?}", stmt.exp);
         self.visit_expression(stmt.exp.as_mut().unwrap())?;
 
         if self.is_int {
@@ -163,7 +200,10 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
 
                 Ok(())
             }
-            _ => Ok(()),
+            _ => {
+                self.is_int = false;
+                Ok(())
+            }
         }
     }
 
@@ -171,30 +211,45 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
         &mut self,
         expr: &'ast mut BinaryOperation,
     ) -> Result<(), TypeCheckerError> {
-        let mut setter = ExpressionTypeSetter::new(&Type::I64);
-
         if expr.right.is_none() {
             self.visit_expression(&mut expr.left)?;
 
             if self.is_int {
-                setter
-                    .visit_binary_operation(expr)
-                    .expect("Should not fail");
+                unreachable!("Unary type should be infered before");
             }
 
             Ok(())
         } else {
             self.visit_expression(&mut expr.left)?;
-            let is_left_int = self.is_int;
-            self.visit_expression(expr.right.as_mut().unwrap().as_mut())?;
+            let is_int_left = self.is_int;
+            self.visit_expression(expr.right.as_mut().unwrap())?;
+            let is_int_right = self.is_int;
 
-            if is_left_int && self.is_int {
-                setter
-                    .visit_binary_operation(expr)
-                    .expect("Should never fail");
+            match (is_int_left, is_int_right) {
+                (true, true) => {
+                    let mut setter = ExpressionTypeSetter::new(&Type::I64);
+                    setter.set_type_recusively(&mut expr.left);
+                    setter.set_type_recusively(expr.right.as_mut().unwrap());
+
+                    Ok(())
+                }
+                (true, false) => {
+                    let ty = expr.right.as_ref().unwrap().get_type();
+                    let mut setter = ExpressionTypeSetter::new(ty);
+                    setter.set_type_recusively(&mut expr.left);
+                    Ok(())
+                }
+                (false, true) => {
+                    self.visit_expression(expr.right.as_mut().unwrap())?;
+                    if self.is_int {
+                        let ty = expr.left.get_type();
+                        let mut setter = ExpressionTypeSetter::new(ty);
+                        setter.set_type_recusively(expr.right.as_mut().unwrap());
+                    }
+                    Ok(())
+                }
+                _ => Ok(()),
             }
-
-            Ok(())
         }
     }
 
