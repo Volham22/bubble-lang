@@ -12,7 +12,7 @@ use libbubble::{
         grammar::GlobalStatementsParser,
         lexer::{Lexer, LexicalError, Token},
     },
-    type_system::{binder::Binder, run_type_checker, },
+    type_system::{binder::Binder, run_type_checker},
 };
 
 pub type StatementsParserResult<T> =

@@ -1,8 +1,8 @@
 use std::convert::Infallible;
 
 use crate::ast::{
-    Bindable, Definition, ForStatement, FunctionStatement, GlobalStatement, IfStatement,
-    LetStatement, Literal, LiteralType, MutableVisitor, StructStatement, WhileStatement,
+    ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
+    MutableVisitor, StructStatement, WhileStatement,
 };
 
 use super::utils::ScopedMap;
@@ -100,7 +100,7 @@ impl<'ast> MutableVisitor<'ast, Infallible> for Renamer {
         Ok(())
     }
 
-    fn visit_literal(&mut self, literal: &mut Literal) -> Result<(), Infallible> {
+    fn visit_literal(&mut self, _: &mut Literal) -> Result<(), Infallible> {
         // if let LiteralType::Identifier(ref id) = literal.literal_type {
         //     match self.variables.find_symbol(id) {
         //         Some(decl) => {

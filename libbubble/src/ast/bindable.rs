@@ -9,24 +9,15 @@ pub enum Definition {
 
 impl Definition {
     pub fn is_struct(&self) -> bool {
-        match self {
-            Definition::Struct(_) => true,
-            _ => false,
-        }
+        matches!(self, Definition::Struct(_))
     }
 
     pub fn is_local_variable(&self) -> bool {
-        match self {
-            Definition::LocalVariable(_) => true,
-            _ => false,
-        }
+        matches!(self, Definition::LocalVariable(_))
     }
 
     pub fn is_function(&self) -> bool {
-        match self {
-            Definition::Function(_) => true,
-            _ => false,
-        }
+        matches!(self, Definition::Function(_))
     }
 }
 

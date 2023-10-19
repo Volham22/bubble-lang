@@ -193,7 +193,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         if let LiteralType::Identifier(name) = &expr.literal_type {
             match self.local_variables.find_symbol(name) {
                 Some(var) => {
-                    expr.set_definition(Definition::LocalVariable(var.clone()));
+                    expr.set_definition(Definition::LocalVariable(*var));
                     Ok(())
                 }
                 None => Err(BinderError::UndeclaredVariable {
@@ -230,7 +230,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
             TypeKind::Identifier(name) => {
                 let declaration = self.struct_statement.get(name);
                 if let Some(dec) = declaration {
-                    expr.set_definition(Definition::Struct(dec.clone()));
+                    expr.set_definition(Definition::Struct(*dec));
                     Ok(())
                 } else {
                     Err(BinderError::UndeclaredStruct {
