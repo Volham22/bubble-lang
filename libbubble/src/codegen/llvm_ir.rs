@@ -230,23 +230,25 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         self.builder.position_at_end(entry);
 
         for (i, arg) in fn_val.get_param_iter().enumerate() {
+            let arg_name = &stmt.parameters[i].name;
             arg.set_name(&stmt.parameters[i].name);
+            let alloca = self.create_entry_block_alloca(arg_name, arg.get_type());
+            self.builder.build_store(alloca, arg);
+            self.variables.insert(arg_name, alloca);
         }
 
-        // Function parameter and local variables allocas
+        // local variables allocas
         for stack_var in self
             .frame_table
             .get(stmt.name.as_str())
             .expect("Function not collected!")
             .iter()
         {
-            self.variables.insert(
+            let alloca = self.create_entry_block_alloca(
                 stack_var.name,
-                self.create_entry_block_alloca(
-                    stack_var.name,
-                    self.as_basic_type(self.to_llvm_type(stack_var.kind)),
-                ),
+                self.as_basic_type(self.to_llvm_type(stack_var.kind)),
             );
+            self.variables.insert(stack_var.name, alloca);
         }
 
         self.visit_statements(stmt.body.as_ref().unwrap())?;

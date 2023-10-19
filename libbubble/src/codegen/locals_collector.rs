@@ -47,13 +47,9 @@ impl<'ast> Visitor<'ast, Infallible> for Collector<'ast> {
             return Ok(());
         }
 
-        let mut collected_parameters: Vec<StackVariable<'ast>> = Vec::new();
+        let collected_parameters: Vec<StackVariable<'ast>> = Vec::new();
         match stmt.get_type() {
-            Type::Function { parameters, .. } => {
-                for (ty, name) in parameters {
-                    collected_parameters.push(StackVariable::new(name, ty))
-                }
-
+            Type::Function { .. } => {
                 self.current_function = Some(&stmt.name);
                 self.function_symbols
                     .insert(&stmt.name, collected_parameters);
