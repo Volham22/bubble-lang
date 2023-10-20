@@ -105,6 +105,34 @@ use crate::assets::build_and_link;
     "/tmp/use_libc_puts",
     0
 )]
+#[case::return_i32(
+    r#"
+    function main(): i32 {
+        return 0;
+}"#,
+    "/tmp/return_i32",
+    0
+)]
+#[case::return_i32_expression(
+    r#"
+    function main(): i32 {
+        return 1 - 1;
+}"#,
+    "/tmp/return_i32_expression",
+    0
+)]
+#[case::parameter_int_type_inference(
+    r#"
+    function f(x: i32): i32 {
+        return x;
+    }
+
+    function main(): i32 {
+        return f(0);
+}"#,
+    "/tmp/parameter_int_type_inference",
+    0
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,

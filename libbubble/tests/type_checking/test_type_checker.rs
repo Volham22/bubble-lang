@@ -1,6 +1,6 @@
 use libbubble::{
     ast,
-    type_system::{self, type_checker::TypeCheckerError},
+    type_system::{self, TypeCheckerError},
 };
 use rstest::rstest;
 
@@ -31,7 +31,7 @@ use crate::assets::run_type_checker;
 #[case::infer_type_int(
     r#"
     function f(): i64 {
-        let a = 32;
+        let a: i64 = 32;
         return a;
     }
 "#
@@ -39,7 +39,7 @@ use crate::assets::run_type_checker;
 #[case::valid_variable_init_with_type_inference(
     r#"
     function f() {
-        let a = 2;
+        let a: i32 = 2;
     }
 "#
 )]
@@ -99,7 +99,7 @@ use crate::assets::run_type_checker;
 #[case::for_next_item_condition_is_bool(
     r#"
     function f() {
-        for i = 2; i != 5; i = i + 1 {
+        for i: i32 = 2; i != 5; i = i + 1 {
             42;
         }
     }
@@ -151,6 +151,31 @@ use crate::assets::run_type_checker;
     function f(): i64 {
         b(32);
         return 0;
+    }
+"#
+)]
+#[case::return_int_expression_inference(
+    r#"
+    function main(): i64 {
+        return 1 + 1;
+    }
+"#
+)]
+#[case::parameter_int_type_inference(
+    r#"
+    function f(x: i32): i32 {
+        return x;
+    }
+
+    function main(): i32 {
+        return f(0);
+    }
+"#
+)]
+#[case::identity_i32_function(
+    r#"
+    function f(x: i64): i64 {
+        return x;
     }
 "#
 )]

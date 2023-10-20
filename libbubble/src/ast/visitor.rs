@@ -57,7 +57,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             self.visit_type_kind(dec_ty)?;
         }
 
-        self.visit_expression(&stmt.init_exp)?;
+        self.visit_expression(stmt.init_exp.as_ref().expect("Let has no init type!"))?;
         Ok(())
     }
 
@@ -202,7 +202,8 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             self.visit_type_kind(dec_ty)?;
         }
 
-        self.visit_expression(&mut stmt.init_exp)?;
+        self.visit_expression(stmt.init_exp.as_mut().expect("Let has no init type!"))?;
+
         Ok(())
     }
 

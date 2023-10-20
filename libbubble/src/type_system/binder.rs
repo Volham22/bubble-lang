@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    Bindable, BreakStatement, Call, ContinueStatement, Definition, Expression, ForStatement,
-    FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType, Locatable,
-    MutableVisitor, ReturnStatement, StructStatement, TokenLocation, Type, TypeKind,
-    WhileStatement,
+    Bindable, BreakStatement, Call, ContinueStatement, Definition, ForStatement, FunctionStatement,
+    GlobalStatement, IfStatement, LetStatement, Literal, LiteralType, Locatable, MutableVisitor,
+    ReturnStatement, StructStatement, TokenLocation, Type, TypeKind, WhileStatement,
 };
 use thiserror::Error;
 
@@ -37,9 +36,9 @@ pub enum BinderError<'ast> {
 
 #[derive(Default)]
 pub struct Binder {
-    functions_statements: HashMap<String, FunctionStatement>,
-    struct_statement: HashMap<String, StructStatement>,
-    local_variables: ScopedMap<LetStatement>,
+    functions_statements: HashMap<String, *const FunctionStatement>,
+    struct_statement: HashMap<String, *const StructStatement>,
+    local_variables: ScopedMap<*const LetStatement>,
     nested_loop: usize,
     in_function: bool,
 }
@@ -72,31 +71,16 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         &mut self,
         stmt: &'ast mut FunctionStatement,
     ) -> Result<(), BinderError<'ast>> {
-        let location = stmt.get_location();
-
         self.functions_statements
-            .insert(stmt.name.to_string(), stmt.clone());
+            .insert(stmt.name.to_string(), stmt);
 
         if !stmt.is_extern {
             self.local_variables.new_scope();
             // We treat functions parameters as simple declarations as it'll simplify the rest of our
             // implementation.
             // TODO: Investigate if it's possible to do it directly in the ast
-            for (kind, parameter_name) in &stmt.parameters {
-                self.local_variables.insert_symbol(
-                    parameter_name,
-                    LetStatement::new(
-                        location.begin,
-                        location.end,
-                        parameter_name.to_string(),
-                        Some(kind.clone()),
-                        Box::new(Expression::Literal(Literal::new(
-                            location.begin,
-                            location.end,
-                            crate::ast::LiteralType::True,
-                        ))),
-                    ),
-                );
+            for let_stmt in &stmt.parameters {
+                self.local_variables.insert_symbol(&let_stmt.name, let_stmt);
             }
 
             self.in_function = true;
@@ -109,8 +93,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
     }
 
     fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), BinderError<'ast>> {
-        self.struct_statement
-            .insert(stmt.name.to_string(), stmt.clone());
+        self.struct_statement.insert(stmt.name.to_string(), stmt);
 
         for (kind, _) in &mut stmt.fields {
             self.visit_type_kind(kind)?;
@@ -120,8 +103,13 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
     }
 
     fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), BinderError<'ast>> {
-        self.local_variables.insert_symbol(&stmt.name, stmt.clone());
-        self.visit_expression(&mut stmt.init_exp)?;
+        self.local_variables.insert_symbol(&stmt.name, stmt);
+        self.visit_expression(
+            stmt.init_exp
+                .as_mut()
+                .expect("variable declaration has no init type!"),
+        )?;
+
         Ok(())
     }
 
@@ -205,7 +193,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         if let LiteralType::Identifier(name) = &expr.literal_type {
             match self.local_variables.find_symbol(name) {
                 Some(var) => {
-                    expr.set_definition(Definition::LocalVariable(var.clone()));
+                    expr.set_definition(Definition::LocalVariable(*var));
                     Ok(())
                 }
                 None => Err(BinderError::UndeclaredVariable {
@@ -227,8 +215,8 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
             });
         }
 
-        let dec = declaration.unwrap();
-        expr.set_definition(Definition::Function((*dec).clone()));
+        let dec = *declaration.unwrap();
+        expr.set_definition(Definition::Function(dec));
 
         for arg in &mut expr.arguments {
             self.visit_expression(arg)?;
@@ -242,7 +230,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
             TypeKind::Identifier(name) => {
                 let declaration = self.struct_statement.get(name);
                 if let Some(dec) = declaration {
-                    expr.set_definition(Definition::Struct(dec.clone()));
+                    expr.set_definition(Definition::Struct(*dec));
                     Ok(())
                 } else {
                     Err(BinderError::UndeclaredStruct {

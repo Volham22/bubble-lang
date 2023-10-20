@@ -230,23 +230,25 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         self.builder.position_at_end(entry);
 
         for (i, arg) in fn_val.get_param_iter().enumerate() {
-            arg.set_name(&stmt.parameters[i].1);
+            let arg_name = &stmt.parameters[i].name;
+            arg.set_name(&stmt.parameters[i].name);
+            let alloca = self.create_entry_block_alloca(arg_name, arg.get_type());
+            self.builder.build_store(alloca, arg);
+            self.variables.insert(arg_name, alloca);
         }
 
-        // Function parameter and local variables allocas
+        // local variables allocas
         for stack_var in self
             .frame_table
             .get(stmt.name.as_str())
             .expect("Function not collected!")
             .iter()
         {
-            self.variables.insert(
+            let alloca = self.create_entry_block_alloca(
                 stack_var.name,
-                self.create_entry_block_alloca(
-                    stack_var.name,
-                    self.as_basic_type(self.to_llvm_type(stack_var.kind)),
-                ),
+                self.as_basic_type(self.to_llvm_type(stack_var.kind)),
             );
+            self.variables.insert(stack_var.name, alloca);
         }
 
         self.visit_statements(stmt.body.as_ref().unwrap())?;
@@ -260,7 +262,11 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
     }
 
     fn visit_let(&mut self, stmt: &'ast LetStatement) -> Result<(), Infallible> {
-        self.visit_expression(&stmt.init_exp)?;
+        self.visit_expression(
+            stmt.init_exp
+                .as_ref()
+                .expect("Let statement has no init exp"),
+        )?;
 
         let store_value = self
             .variables
@@ -540,7 +546,17 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 self.current_value = Some(self.context.bool_type().const_zero().into());
             }
             LiteralType::Integer(x) => {
-                self.current_value = Some(self.context.i64_type().const_int(*x as u64, true).into())
+                let int_ty = stmt
+                    .ty
+                    .as_ref()
+                    .expect("integer like literal must have type!");
+
+                self.current_value = Some(
+                    self.to_llvm_type(int_ty)
+                        .into_int_type()
+                        .const_int(*x as u64, int_ty.is_signed())
+                        .into(),
+                );
             }
             LiteralType::Float(x) => {
                 self.current_value = Some(self.context.f64_type().const_float(*x).into())

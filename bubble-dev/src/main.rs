@@ -1,4 +1,4 @@
-use std::{path::Path, process::Command};
+use std::{fs, path::Path, process::Command};
 
 use inkwell::{
     context::Context,
@@ -12,7 +12,7 @@ use libbubble::{
         grammar::GlobalStatementsParser,
         lexer::{Lexer, LexicalError, Token},
     },
-    type_system::{binder::Binder, type_checker::TypeChecker},
+    type_system::{binder::Binder, run_type_checker},
 };
 
 pub type StatementsParserResult<T> =
@@ -24,25 +24,16 @@ pub fn parse_global_statements_input(code: &str) -> StatementsParserResult<Vec<G
     parser.parse(lexer)
 }
 
+pub fn read_file_to_string(file: &Path) -> String {
+    fs::read_to_string(file).expect("failed to read file")
+}
+
 fn main() {
-    let mut stmts = parse_global_statements_input(
-        r#"extern function puts(msg: string): i32;
-    function main(): i64 {
-        let i: i64 = 0;
-        while i < 10 {
-            puts("hey");
-            i = i + 1;
-        }
-        return 0;
-}"#,
-    )
-    .expect("Failed to parse code");
+    let source_code = read_file_to_string(Path::new("test.blb"));
+    let mut stmts = parse_global_statements_input(&source_code).expect("Failed to parse code");
     let mut binder = Binder::default();
-    let mut type_checker = TypeChecker::default();
     binder.bind_statements(&mut stmts).expect("Binder failed");
-    type_checker
-        .check_statements(&mut stmts)
-        .expect("Type checker failed");
+    run_type_checker(&mut stmts).expect("Type checker failed");
 
     let context = Context::create();
     let module = context.create_module("module");

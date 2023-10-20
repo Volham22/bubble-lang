@@ -19,7 +19,7 @@ pub type FunctionParameter = (TypeKind, String);
 #[derive(Debug, Clone)]
 pub struct FunctionStatement {
     pub name: String,
-    pub parameters: Vec<FunctionParameter>,
+    pub parameters: Vec<LetStatement>,
     pub return_type: TypeKind,
     pub is_extern: bool,
     pub body: Option<Statements>,
@@ -39,7 +39,12 @@ impl FunctionStatement {
     ) -> Self {
         Self {
             name,
-            parameters,
+            parameters: parameters
+                .iter()
+                .map(|(kind, name)| {
+                    LetStatement::new(tk_begin, tk_end, name.to_string(), Some(kind.clone()), None)
+                })
+                .collect(),
             return_type,
             is_extern,
             body,
@@ -53,7 +58,7 @@ impl FunctionStatement {
 pub struct LetStatement {
     pub name: String,
     pub declaration_type: Option<TypeKind>,
-    pub init_exp: Box<Expression>,
+    pub init_exp: Option<Box<Expression>>,
     location: TokenLocation,
     pub(crate) ty: Option<type_system::Type>,
 }
@@ -64,7 +69,7 @@ impl LetStatement {
         tk_end: usize,
         name: String,
         declaration_type: Option<TypeKind>,
-        init_exp: Box<Expression>,
+        init_exp: Option<Box<Expression>>,
     ) -> Self {
         Self {
             name,

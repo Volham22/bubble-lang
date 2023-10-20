@@ -1,4 +1,7 @@
-use crate::ast::{self, FunctionStatement, LetStatement, Literal, StructStatement};
+use crate::ast::{
+    self, Assignment, BinaryOperation, Call, Expression, FunctionStatement, LetStatement, Literal,
+    StructStatement,
+};
 
 pub type FunctionParameter = (Type, String);
 
@@ -80,6 +83,10 @@ impl Type {
                 | Type::Int
         )
     }
+
+    pub fn is_signed(&self) -> bool {
+        matches!(self, Type::I8 | Type::I16 | Type::I32 | Type::I64)
+    }
 }
 
 impl From<ast::TypeKind> for Type {
@@ -126,4 +133,28 @@ macro_rules! impl_typables {
     };
 }
 
-impl_typables!(FunctionStatement, LetStatement, StructStatement, Literal);
+impl_typables!(
+    Assignment,
+    BinaryOperation,
+    Call,
+    FunctionStatement,
+    LetStatement,
+    Literal,
+    StructStatement
+);
+
+impl Typable for Expression {
+    fn get_type(&self) -> &Type {
+        match self {
+            Expression::Group(g) => g.get_type(),
+            Expression::BinaryOperation(bo) => bo.get_type(),
+            Expression::Literal(l) => l.get_type(),
+            Expression::Call(c) => c.get_type(),
+            Expression::Assignment(a) => a.get_type(),
+        }
+    }
+
+    fn set_type(&mut self, _: Type) {
+        unreachable!("Cannot set type to an expression directly");
+    }
+}
