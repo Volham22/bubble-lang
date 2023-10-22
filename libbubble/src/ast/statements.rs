@@ -23,7 +23,7 @@ pub struct FunctionStatement {
     pub return_type: TypeKind,
     pub is_extern: bool,
     pub body: Option<Statements>,
-    location: TokenLocation,
+    pub(crate) location: TokenLocation,
     pub(crate) ty: Option<type_system::Type>,
 }
 
@@ -149,7 +149,7 @@ impl StructStatement {
 #[derive(Debug, Clone)]
 pub struct Statements {
     pub statements: Vec<Statement>,
-    location: TokenLocation,
+    pub(crate) location: TokenLocation,
 }
 
 impl Statements {
@@ -168,7 +168,7 @@ impl Statements {
 #[derive(Debug, Clone)]
 pub struct Statement {
     pub kind: StatementKind,
-    location: TokenLocation,
+    pub(crate) location: TokenLocation,
 }
 
 impl Statement {
@@ -221,7 +221,7 @@ impl IfStatement {
 pub struct WhileStatement {
     pub condition: Box<Expression>,
     pub body: Box<Statements>,
-    location: TokenLocation,
+    pub(crate) location: TokenLocation,
 }
 
 impl WhileStatement {
@@ -245,7 +245,7 @@ pub struct ForStatement {
     pub continue_expression: Box<Expression>,
     pub modify_expression: Box<Expression>,
     pub body: Box<Statements>,
-    location: TokenLocation,
+    pub(crate) location: TokenLocation,
 }
 
 impl ForStatement {

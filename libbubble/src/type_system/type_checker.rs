@@ -79,6 +79,9 @@ impl PartialEq for TypeCheckerError {
             ) | (
                 TypeCheckerError::ReturnTypeMismatch { .. },
                 TypeCheckerError::ReturnTypeMismatch { .. },
+            ) | (
+                TypeCheckerError::InferenceError(_),
+                TypeCheckerError::InferenceError(_),
             )
         )
     }
