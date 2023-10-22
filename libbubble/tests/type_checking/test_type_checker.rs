@@ -179,6 +179,16 @@ use crate::assets::run_type_checker;
     }
 "#
 )]
+#[case::for_int_inference_with_hint(
+    r#"
+    function main(): i32 {
+        for i: i32 = 0; i < 5; i = i + 1 {
+            42;
+        }
+
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -346,9 +356,24 @@ fn type_checker_valid(#[case] code: &str) {
    "#,
     TypeCheckerError::ReturnTypeMismatch { got: type_system::Type::String, expected: type_system::Type::I32 }
 )]
+#[case::for_int_inference_without_hint(
+    r#"
+    function main(): i32 {
+        for i = 0; i < 5; i = i + 1 {
+            42;
+        }
+
+        return 0;
+    }"#,
+    TypeCheckerError::InferenceError(ast::TokenLocation { line: 0, column: 0, begin: 36, end: 91 })
+)]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);
 
     assert!(result.is_err(), "Result should be an error");
-    assert_eq!(result.unwrap_err(), expected_error);
+    let err = result.unwrap_err();
+    assert_eq!(
+        err, expected_error,
+        "got: {err:?} expected: {expected_error:?}"
+    );
 }

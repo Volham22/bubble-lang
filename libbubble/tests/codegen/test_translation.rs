@@ -161,6 +161,79 @@ fn test_translation(
     0,
     "hey\nhey\nhey\nhey\nhey\n"
 )]
+#[case::for_i_0_to_5(
+    r#"
+    extern function puts(msg: string): i32;
+    function main(): i32 {
+        for i: i32 = 0; i < 5; i = i + 1 {
+            puts("hey");
+        }
+
+        return 0;
+    }"#,
+    "/tmp/for_i_0_10",
+    0,
+    "hey\nhey\nhey\nhey\nhey\n"
+)]
+#[case::for_never_loop(
+    r#"
+    extern function puts(msg: string): i32;
+    function main(): i32 {
+        for i: i32 = 0; false; i = i + 1 {
+            puts("hey");
+        }
+
+        return 0;
+    }"#,
+    "/tmp/for_never_loop",
+    0,
+    ""
+)]
+#[case::for_condition_not_in_modify_expression(
+    // i is useless here
+    r#"
+    extern function puts(msg: string): i32;
+    function main(): i32 {
+        let j: i32 = 0;
+        for i: i32 = 0; j < 5; i = i + 1 {
+            puts("hey");
+            j = j + 1;
+        }
+
+        return 0;
+    }"#,
+    "/tmp/for_condition_not_in_modify_expression",
+    0,
+    "hey\nhey\nhey\nhey\nhey\n"
+)]
+#[case::for_i_is_bool(
+    r#"
+    extern function puts(msg: string): i32;
+    function main(): i32 {
+        for i: bool = true; i; i = false {
+            puts("Only once");
+        }
+
+        return 0;
+    }"#,
+    "/tmp/for_i_is_bool",
+    0,
+    "Only once\n"
+)]
+#[case::for_variable_condition_always_false(
+    r#"
+    extern function puts(msg: string): i32;
+    function main(): i32 {
+        for i: i32 = 42; i < 10; i = i + 1 {
+            puts("unreachable!");
+        }
+
+        return 0;
+    }"#,
+    "/tmp/for_variable_condition_always_false",
+    0,
+    ""
+)]
 fn test_translation_with_stdout(
     #[case] code: &str,
     #[case] executable_path: &str,
