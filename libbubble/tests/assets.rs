@@ -8,6 +8,7 @@ use inkwell::{
 use libbubble::{
     ast::{GlobalStatement, Statements},
     codegen::build_module,
+    desugar::desugar_ast,
     parser::{
         grammar::{GlobalStatementsParser, StatementsParser},
         lexer::{Lexer, LexicalError, Token},
@@ -44,6 +45,7 @@ pub fn build_and_link(code: &str, outname: &str, executable_name: &str) {
     let mut binder = Binder::default();
     binder.bind_statements(&mut stmts).expect("Binder failed");
     type_check(&mut stmts).expect("Type checker failed");
+    stmts = desugar_ast(stmts);
 
     let context = Context::create();
     let module = context.create_module("module");
