@@ -1,4 +1,4 @@
-FROM rust:1.73-bullseye
+FROM rust:1.74-bullseye
 
 RUN rustup component add rustfmt
 RUN rustup component add clippy
