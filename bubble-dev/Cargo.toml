@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 libbubble = { path = "../libbubble" }
-inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm15-0"] }
-lalrpop-util = "0.19.9"
+inkwell = { workspace = true }
+lalrpop-util = { workspace = true }

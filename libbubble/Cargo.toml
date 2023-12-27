@@ -12,8 +12,8 @@ lalrpop = "0.19.9"
 rstest = "0.17.0"
 
 [dependencies]
-logos = "0.12.1"
-lalrpop-util = "0.19.9"
-regex = "1"
-thiserror = "1.0.40"
-inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm15-0"] }
+inkwell = { workspace = true }
+logos = { workspace = true }
+lalrpop-util = { workspace = true }
+regex = { workspace = true }
+thiserror = { workspace = true }
