@@ -174,7 +174,9 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
             None => builder.position_at_end(entry),
         }
 
-        builder.build_alloca(ty, name)
+        builder
+            .build_alloca(ty, name)
+            .expect("failed to build alloca")
     }
 }
 
@@ -233,7 +235,9 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
             let arg_name = &stmt.parameters[i].name;
             arg.set_name(&stmt.parameters[i].name);
             let alloca = self.create_entry_block_alloca(arg_name, arg.get_type());
-            self.builder.build_store(alloca, arg);
+            self.builder
+                .build_store(alloca, arg)
+                .expect("Fail to build store");
             self.variables.insert(arg_name, alloca);
         }
 
@@ -273,18 +277,20 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
             .get(stmt.name.as_str())
             .expect("Variable does not exist!");
 
-        self.builder.build_store(
-            *store_value,
-            match self.current_value.unwrap() {
-                AnyValueEnum::ArrayValue(v) => v.as_basic_value_enum(),
-                AnyValueEnum::IntValue(v) => v.as_basic_value_enum(),
-                AnyValueEnum::FloatValue(v) => v.as_basic_value_enum(),
-                AnyValueEnum::PointerValue(v) => v.as_basic_value_enum(),
-                AnyValueEnum::StructValue(v) => v.as_basic_value_enum(),
-                AnyValueEnum::VectorValue(v) => v.as_basic_value_enum(),
-                _ => unreachable!(),
-            },
-        );
+        self.builder
+            .build_store(
+                *store_value,
+                match self.current_value.unwrap() {
+                    AnyValueEnum::ArrayValue(v) => v.as_basic_value_enum(),
+                    AnyValueEnum::IntValue(v) => v.as_basic_value_enum(),
+                    AnyValueEnum::FloatValue(v) => v.as_basic_value_enum(),
+                    AnyValueEnum::PointerValue(v) => v.as_basic_value_enum(),
+                    AnyValueEnum::StructValue(v) => v.as_basic_value_enum(),
+                    AnyValueEnum::VectorValue(v) => v.as_basic_value_enum(),
+                    _ => unreachable!(),
+                },
+            )
+            .expect("Fail to build store");
 
         self.current_value = Some(store_value.as_any_value_enum());
         self.variables.insert(&stmt.name, *store_value);
@@ -297,30 +303,38 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         let zero_const = self.context.i64_type().const_zero();
 
         self.visit_expression(&stmt.condition)?;
-        let condition = self.builder.build_int_compare(
-            inkwell::IntPredicate::NE,
-            zero_const,
-            self.current_value.unwrap().into_int_value(),
-            "if_condition",
-        );
+        let condition = self
+            .builder
+            .build_int_compare(
+                inkwell::IntPredicate::NE,
+                zero_const,
+                self.current_value.unwrap().into_int_value(),
+                "if_condition",
+            )
+            .expect("Fail to build int compare");
 
         let then_bb = self.context.append_basic_block(parent, "then");
         let else_bb = self.context.append_basic_block(parent, "else");
         let merge_bb = self.context.append_basic_block(parent, "merge");
 
         self.builder
-            .build_conditional_branch(condition, then_bb, else_bb);
+            .build_conditional_branch(condition, then_bb, else_bb)
+            .expect("Fail to build conditional branch");
 
         self.builder.position_at_end(then_bb);
         self.visit_statements(&stmt.then_clause)?;
-        self.builder.build_unconditional_branch(merge_bb);
+        self.builder
+            .build_unconditional_branch(merge_bb)
+            .expect("Fail to build unconditional branch");
 
         self.builder.position_at_end(else_bb);
         if let Some(ref stmts) = stmt.else_clause {
             self.visit_statements(stmts)?;
         }
 
-        self.builder.build_unconditional_branch(merge_bb);
+        self.builder
+            .build_unconditional_branch(merge_bb)
+            .expect("Fail to build unconditional branch");
         self.builder.position_at_end(merge_bb);
         Ok(())
     }
@@ -333,22 +347,30 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         let while_block = self.context.append_basic_block(parent, "while_body");
         let after_while_block = self.context.append_basic_block(parent, "after_while");
 
-        self.builder.build_unconditional_branch(condition_block);
+        self.builder
+            .build_unconditional_branch(condition_block)
+            .expect("Fail to build unconditional branch");
         self.builder.position_at_end(condition_block);
         self.visit_expression(&stmt.condition)?;
 
-        let condition = self.builder.build_int_compare(
-            inkwell::IntPredicate::NE,
-            zero_const,
-            self.current_value.unwrap().into_int_value(),
-            "if_condition",
-        );
+        let condition = self
+            .builder
+            .build_int_compare(
+                inkwell::IntPredicate::NE,
+                zero_const,
+                self.current_value.unwrap().into_int_value(),
+                "if_condition",
+            )
+            .expect("Fail to build int compare");
         self.builder
-            .build_conditional_branch(condition, while_block, after_while_block);
+            .build_conditional_branch(condition, while_block, after_while_block)
+            .expect("Fail to build unconditional branch");
 
         self.builder.position_at_end(while_block);
         self.visit_statements(&stmt.body)?;
-        self.builder.build_unconditional_branch(condition_block); // Loop
+        self.builder
+            .build_unconditional_branch(condition_block) // Loop
+            .expect("Fail to build unconditional branch");
 
         self.builder.position_at_end(after_while_block);
 
@@ -373,9 +395,12 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                     AnyValueEnum::StructValue(v) => v,
                     AnyValueEnum::VectorValue(v) => v,
                     _ => panic!("value is not basic!"),
-                }));
+                }))
+                .expect("Fail to build return");
         } else {
-            self.builder.build_return(None);
+            self.builder
+                .build_return(None)
+                .expect("Fail to build return");
         }
 
         Ok(())
@@ -392,12 +417,22 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         // Unary operation
         if expr.right.is_none() {
             self.current_value = Some(match expr.op {
-                OpType::Not => self.builder.build_not(left.into_int_value(), "not").into(),
+                OpType::Not => self
+                    .builder
+                    .build_not(left.into_int_value(), "not")
+                    .expect("Fail to build not")
+                    .into(),
                 OpType::Minus => match left {
-                    AnyValueEnum::IntValue(v) => self.builder.build_int_neg(v, "neg").into(),
-                    AnyValueEnum::FloatValue(v) => {
-                        self.builder.build_float_neg(v, "neg_float").into()
-                    }
+                    AnyValueEnum::IntValue(v) => self
+                        .builder
+                        .build_int_neg(v, "neg")
+                        .expect("Fail to build int neg")
+                        .into(),
+                    AnyValueEnum::FloatValue(v) => self
+                        .builder
+                        .build_float_neg(v, "neg_float")
+                        .expect("Failed to build float neg")
+                        .into(),
                     _ => unreachable!(),
                 },
                 _ => unreachable!(),
@@ -411,35 +446,44 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
 
         let value: AnyValueEnum = match expr.op {
             OpType::And => match (left, right) {
-                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => {
-                    self.builder.build_and(v1, v2, "and").into()
-                }
+                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
+                    .builder
+                    .build_and(v1, v2, "and")
+                    .expect("Fail to build and")
+                    .into(),
                 _ => unreachable!(),
             },
             OpType::Different => match (left, right) {
                 (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
                     .builder
                     .build_int_compare(IntPredicate::NE, v1, v2, "!=")
+                    .expect("Fail to build int compare")
                     .into(),
                 _ => unreachable!(),
             },
             OpType::Divide => match (left, right) {
-                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => {
-                    self.builder.build_int_signed_div(v1, v2, "divide").into()
-                }
-                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => {
-                    self.builder.build_float_div(v1, v2, "divide_float").into()
-                }
+                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
+                    .builder
+                    .build_int_signed_div(v1, v2, "divide")
+                    .expect("Fail to build int signed div")
+                    .into(),
+                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
+                    .builder
+                    .build_float_div(v1, v2, "divide_float")
+                    .expect("Fail to build float div")
+                    .into(),
                 _ => unreachable!(),
             },
             OpType::Equal => match (left, right) {
                 (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
                     .builder
                     .build_int_compare(IntPredicate::EQ, v1, v2, "equal")
+                    .expect("Fail to build int compare")
                     .into(),
                 (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
                     .builder
                     .build_float_compare(FloatPredicate::OEQ, v1, v2, "divide_float")
+                    .expect("Fail to build float compare")
                     .into(),
                 _ => unreachable!(),
             },
@@ -447,10 +491,12 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
                     .builder
                     .build_int_compare(IntPredicate::SLT, v1, v2, "equal")
+                    .expect("Fail to build int compare")
                     .into(),
                 (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
                     .builder
                     .build_float_compare(FloatPredicate::OLT, v1, v2, "divide_float")
+                    .expect("Fail to build float compare")
                     .into(),
                 _ => unreachable!(),
             },
@@ -458,39 +504,51 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
                     .builder
                     .build_int_compare(IntPredicate::SLE, v1, v2, "less_equal")
+                    .expect("Fail to build int compare")
                     .into(),
                 (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
                     .builder
                     .build_float_compare(FloatPredicate::OLE, v1, v2, "less_equal_float")
+                    .expect("Fail to build float compare")
                     .into(),
                 _ => unreachable!(),
             },
             OpType::Minus => match (left, right) {
-                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => {
-                    self.builder.build_int_sub(v1, v2, "sub").into()
-                }
-                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => {
-                    self.builder.build_float_sub(v1, v2, "sub_float").into()
-                }
+                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
+                    .builder
+                    .build_int_sub(v1, v2, "sub")
+                    .expect("Fail to build int sub")
+                    .into(),
+                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
+                    .builder
+                    .build_float_sub(v1, v2, "sub_float")
+                    .expect("Fail to build float sub")
+                    .into(),
                 _ => unreachable!(),
             },
             OpType::Modulo => match (left, right) {
-                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => {
-                    self.builder.build_int_signed_rem(v1, v2, "modulo").into()
-                }
-                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => {
-                    self.builder.build_float_rem(v1, v2, "sub_float").into()
-                }
+                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
+                    .builder
+                    .build_int_signed_rem(v1, v2, "modulo")
+                    .expect("Fail to build int signed rem")
+                    .into(),
+                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
+                    .builder
+                    .build_float_rem(v1, v2, "sub_float")
+                    .expect("Fail to build float rem")
+                    .into(),
                 _ => unreachable!(),
             },
             OpType::More => match (left, right) {
                 (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
                     .builder
                     .build_int_compare(IntPredicate::SGT, v1, v2, "equal")
+                    .expect("Fail to build int compare")
                     .into(),
                 (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
                     .builder
                     .build_float_compare(FloatPredicate::OGT, v1, v2, "divide_float")
+                    .expect("Fail to build float compare")
                     .into(),
                 _ => unreachable!(),
             },
@@ -498,35 +556,47 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
                     .builder
                     .build_int_compare(IntPredicate::SGE, v1, v2, "equal")
+                    .expect("Fail to build int compare")
                     .into(),
                 (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
                     .builder
                     .build_float_compare(FloatPredicate::OGE, v1, v2, "divide_float")
+                    .expect("Fail to build float compare")
                     .into(),
                 _ => unreachable!(),
             },
             OpType::Multiply => match (left, right) {
-                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => {
-                    self.builder.build_int_mul(v1, v2, "equal").into()
-                }
-                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => {
-                    self.builder.build_float_mul(v1, v2, "divide_float").into()
-                }
+                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
+                    .builder
+                    .build_int_mul(v1, v2, "equal")
+                    .expect("Fail to build int mul")
+                    .into(),
+                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
+                    .builder
+                    .build_float_mul(v1, v2, "divide_float")
+                    .expect("Fail to build float mul")
+                    .into(),
                 _ => unreachable!(),
             },
             OpType::Or => match (left, right) {
-                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => {
-                    self.builder.build_or(v1, v2, "or").into()
-                }
+                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
+                    .builder
+                    .build_or(v1, v2, "or")
+                    .expect("Fail to build or")
+                    .into(),
                 _ => unreachable!(),
             },
             OpType::Plus => match (left, right) {
-                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => {
-                    self.builder.build_int_add(v1, v2, "add").into()
-                }
-                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => {
-                    self.builder.build_float_add(v1, v2, "add").into()
-                }
+                (AnyValueEnum::IntValue(v1), AnyValueEnum::IntValue(v2)) => self
+                    .builder
+                    .build_int_add(v1, v2, "add")
+                    .expect("Fail to build int add")
+                    .into(),
+                (AnyValueEnum::FloatValue(v1), AnyValueEnum::FloatValue(v2)) => self
+                    .builder
+                    .build_float_add(v1, v2, "add")
+                    .expect("Fail to build float add")
+                    .into(),
                 _ => unreachable!(),
             },
             OpType::Not => unreachable!("not isn't a binary operation"),
@@ -574,6 +644,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                             *ptr,
                             "load",
                         )
+                        .expect("Fail to build load")
                         .as_any_value_enum(),
                 );
             }
@@ -581,6 +652,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 self.current_value = Some(
                     self.builder
                         .build_global_string_ptr(content.as_str(), "string_literal")
+                        .expect("Fail to build global string ptr")
                         .as_any_value_enum(),
                 );
             }
@@ -605,6 +677,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         self.current_value = Some(
             self.builder
                 .build_call(fn_value, &parameters_values, "call")
+                .expect("Fail to build call")
                 .as_any_value_enum(),
         );
 
@@ -627,7 +700,9 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
             })
             .unwrap();
 
-        self.builder.build_store(*lhs, self.as_basic_value(rhs));
+        self.builder
+            .build_store(*lhs, self.as_basic_value(rhs))
+            .expect("Fail to build store");
 
         Ok(())
     }

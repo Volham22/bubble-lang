@@ -3,3 +3,11 @@ members = [
     "libbubble",
     "bubble-dev"
 ]
+resolver = "2"
+
+[workspace.dependencies]
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm15-0"] }
+lalrpop-util = "0.19.9"
+logos = "0.12.1"
+regex = "1"
+thiserror = "1.0.40"
