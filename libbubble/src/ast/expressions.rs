@@ -144,4 +144,21 @@ pub struct ArrayAccess {
     location: TokenLocation,
 }
 
+impl ArrayAccess {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        identifier: Box<Expression>,
+        index: Box<Expression>,
+    ) -> Self {
+        Self {
+            identifier,
+            index,
+            location: TokenLocation::new(tk_begin, tk_end),
+            definition: None,
+            ty: None,
+        }
+    }
+}
+
 impl_locatable!(Assignment, Call, Literal, BinaryOperation, ArrayAccess);

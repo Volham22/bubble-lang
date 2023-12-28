@@ -1,6 +1,6 @@
 use crate::ast::{
-    self, Assignment, BinaryOperation, Call, Expression, FunctionStatement, LetStatement, Literal,
-    StructStatement,
+    self, ArrayAccess, Assignment, BinaryOperation, Call, Expression, FunctionStatement,
+    LetStatement, Literal, StructStatement,
 };
 
 pub type FunctionParameter = (Type, String);
@@ -140,6 +140,7 @@ impl_typables!(
     FunctionStatement,
     LetStatement,
     Literal,
+    ArrayAccess,
     StructStatement
 );
 
