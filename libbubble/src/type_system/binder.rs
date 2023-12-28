@@ -76,6 +76,7 @@ impl Binder {
                     LiteralType::Identifier(_) | LiteralType::String(_)
                 )
             }
+            Expression::Call(_) => true,
             _ => false,
         }
     }
@@ -207,10 +208,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
     fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), BinderError<'ast>> {
         match &expr.literal_type {
             LiteralType::Identifier(name) => match self.local_variables.find_symbol(name) {
-                Some(var) => {
-                    expr.set_definition(Definition::LocalVariable(*var));
-                    Ok(())
-                }
+                Some(var) => Ok(expr.set_definition(Definition::LocalVariable(*var))),
                 None => {
                     return Err(BinderError::UndeclaredVariable {
                         location: expr.get_location(),
@@ -221,26 +219,26 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
             LiteralType::ArrayAccess(array_access)
                 if Self::is_subscriptable(&array_access.identifier) =>
             {
-                let name = if let Expression::Literal(l) = array_access.identifier.as_ref() {
-                    match &l.literal_type {
+                let name = match array_access.identifier.as_ref() {
+                    Expression::Literal(l) => match &l.literal_type {
                         LiteralType::Identifier(name) => name,
                         _ => unreachable!(),
-                    }
-                } else {
-                    unreachable!()
+                    },
+                    Expression::Call(c) => &c.callee,
+                    _ => unreachable!(),
                 };
 
                 match self.local_variables.find_symbol(name) {
-                    Some(var) => {
-                        expr.set_definition(Definition::LocalVariable(*var));
-                        Ok(())
-                    }
-                    None => {
-                        return Err(BinderError::UndeclaredVariable {
-                            location: expr.get_location(),
-                            name: name.clone(),
-                        })
-                    }
+                    Some(var) => Ok(expr.set_definition(Definition::LocalVariable(*var))),
+                    None => match self.functions_statements.get(name) {
+                        Some(f) => Ok(expr.set_definition(Definition::Function(*f))),
+                        None => {
+                            return Err(BinderError::UndeclaredVariable {
+                                location: expr.get_location(),
+                                name: name.clone(),
+                            });
+                        }
+                    },
                 }
             }
             LiteralType::ArrayAccess(_) => {
