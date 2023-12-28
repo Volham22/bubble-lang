@@ -189,6 +189,20 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::array_init_bool_inference(
+    r#"
+    function main(): i32 {
+        let arr = [true, true, true];
+        return 0;
+    }"#
+)]
+#[case::array_init_bool_with_type(
+    r#"
+    function main(): i32 {
+        let arr: [3; bool] = [true, true, true];
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(

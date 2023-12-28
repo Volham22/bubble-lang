@@ -3,9 +3,10 @@ use std::ops::Deref;
 use thiserror::Error;
 
 use crate::ast::{
-    Assignment, BinaryOperation, Bindable, Call, Definition, Expression, ForStatement,
-    FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType,
-    MutableVisitor, OpType, ReturnStatement, StructStatement, TokenLocation, WhileStatement,
+    ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Definition, Expression,
+    ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
+    LiteralType, MutableVisitor, OpType, ReturnStatement, StructStatement, TokenLocation,
+    WhileStatement,
 };
 
 use super::{inference::IntegerInference, Typable, Type};
@@ -49,6 +50,12 @@ pub enum TypeCheckerError {
     ReturnTypeMismatch { got: Type, expected: Type },
     #[error("Can't infer a proper type to the variable. Please, add a type annotation")]
     InferenceError(TokenLocation),
+    #[error("Different type in array initializer. Fisrt type is: {first:?} but found {found:?} at position {position}")]
+    DifferentTypeInArrayInitializer {
+        first: Type,
+        found: Type,
+        position: u32,
+    },
 }
 
 impl PartialEq for TypeCheckerError {
@@ -82,6 +89,9 @@ impl PartialEq for TypeCheckerError {
             ) | (
                 TypeCheckerError::InferenceError(_),
                 TypeCheckerError::InferenceError(_),
+            ) | (
+                TypeCheckerError::DifferentTypeInArrayInitializer { .. },
+                TypeCheckerError::DifferentTypeInArrayInitializer { .. },
             )
         )
     }
@@ -441,6 +451,42 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             LiteralType::ArrayAccess(_) => todo!(),
         };
 
+        Ok(())
+    }
+
+    fn visit_array_initializer(
+        &mut self,
+        expr: &'ast mut ArrayInitializer,
+    ) -> Result<(), TypeCheckerError> {
+        let first_type = match expr.values.first_mut() {
+            Some(exp) => {
+                self.visit_expression(exp.as_mut())?;
+                self.current_type.clone().expect("Expression has no type")
+            }
+            None => todo!("Handle empty array init"),
+        };
+
+        for (i, exp) in expr.values.iter_mut().enumerate() {
+            self.visit_expression(exp)?;
+
+            if self
+                .current_type
+                .as_ref()
+                .expect("Array expression has no type")
+                != &first_type
+            {
+                return Err(TypeCheckerError::DifferentTypeInArrayInitializer {
+                    first: first_type,
+                    found: self.current_type.clone().unwrap(),
+                    position: i as u32,
+                });
+            }
+        }
+
+        self.current_type = Some(Type::Array {
+            size: expr.values.len() as u32,
+            array_type: Box::new(first_type),
+        });
         Ok(())
     }
 }

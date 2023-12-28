@@ -39,38 +39,48 @@ pub enum Type {
 
 impl Type {
     pub fn is_compatible_with(&self, other: &Type) -> bool {
-        matches!(
-            (self, other),
+        match (self, other) {
             // `Int` must be compatible with itself to allow stuff like 1 + 1
             (Type::Int, Type::Int)
-                | (Type::Int, Type::U8)
-                | (Type::Int, Type::U16)
-                | (Type::Int, Type::U32)
-                | (Type::Int, Type::U64)
-                | (Type::Int, Type::I8)
-                | (Type::Int, Type::I16)
-                | (Type::Int, Type::I32)
-                | (Type::Int, Type::I64)
-                | (Type::U8, Type::Int)
-                | (Type::U16, Type::Int)
-                | (Type::U32, Type::Int)
-                | (Type::U64, Type::Int)
-                | (Type::I8, Type::Int)
-                | (Type::I16, Type::Int)
-                | (Type::I32, Type::Int)
-                | (Type::I64, Type::Int)
-                | (Type::U8, Type::U8)
-                | (Type::U16, Type::U16)
-                | (Type::U32, Type::U32)
-                | (Type::U64, Type::U64)
-                | (Type::I8, Type::I8)
-                | (Type::I16, Type::I16)
-                | (Type::I32, Type::I32)
-                | (Type::I64, Type::I64)
-                | (Type::Bool, Type::Bool)
-                | (Type::Void, Type::Void)
-                | (Type::String, Type::String)
-        )
+            | (Type::Int, Type::U8)
+            | (Type::Int, Type::U16)
+            | (Type::Int, Type::U32)
+            | (Type::Int, Type::U64)
+            | (Type::Int, Type::I8)
+            | (Type::Int, Type::I16)
+            | (Type::Int, Type::I32)
+            | (Type::Int, Type::I64)
+            | (Type::U8, Type::Int)
+            | (Type::U16, Type::Int)
+            | (Type::U32, Type::Int)
+            | (Type::U64, Type::Int)
+            | (Type::I8, Type::Int)
+            | (Type::I16, Type::Int)
+            | (Type::I32, Type::Int)
+            | (Type::I64, Type::Int)
+            | (Type::U8, Type::U8)
+            | (Type::U16, Type::U16)
+            | (Type::U32, Type::U32)
+            | (Type::U64, Type::U64)
+            | (Type::I8, Type::I8)
+            | (Type::I16, Type::I16)
+            | (Type::I32, Type::I32)
+            | (Type::I64, Type::I64)
+            | (Type::Bool, Type::Bool)
+            | (Type::Void, Type::Void)
+            | (Type::String, Type::String) => true,
+            (
+                Type::Array {
+                    size: lsize,
+                    array_type: larray_type,
+                },
+                Type::Array {
+                    size: rsize,
+                    array_type: rarray_rtype,
+                },
+            ) => lsize == rsize && larray_type == rarray_rtype,
+            _ => false,
+        }
     }
 
     pub fn is_integer(&self) -> bool {
