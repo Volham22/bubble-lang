@@ -1,4 +1,4 @@
-use super::{Call, FunctionStatement, LetStatement, Literal, StructStatement, Type};
+use super::{ArrayAccess, Call, FunctionStatement, LetStatement, Literal, StructStatement, Type};
 
 #[derive(Debug, Clone)]
 pub enum Definition {
@@ -68,5 +68,6 @@ macro_rules! impl_bindable {
 }
 
 impl_bindable!(Literal);
+impl_bindable!(ArrayAccess);
 impl_bindable!(Call);
 impl_bindable!(Type);
