@@ -56,6 +56,8 @@ pub enum TypeCheckerError {
         found: Type,
         position: u32,
     },
+    #[error("Type {ty:?} is not subscriptable")]
+    NonSubscriptable { ty: Type },
 }
 
 impl PartialEq for TypeCheckerError {
@@ -448,7 +450,16 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     }
                 }
             }
-            LiteralType::ArrayAccess(_) => todo!(),
+            LiteralType::ArrayAccess(_) => {
+                let ty = literal.get_local_variable_def().get_type().clone();
+                match ty {
+                    Type::Array { array_type, .. } => {
+                        literal.set_type(array_type.clone().deref().to_owned());
+                        self.current_type = Some(array_type.clone().deref().to_owned());
+                    }
+                    _ => return Err(TypeCheckerError::NonSubscriptable { ty }),
+                }
+            }
         };
 
         Ok(())

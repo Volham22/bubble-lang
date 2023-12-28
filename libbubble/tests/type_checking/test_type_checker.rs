@@ -210,6 +210,21 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::array_access(
+    r#"
+    function main(): i32 {
+        let arr: [3; u32] = [1, 2, 3];
+        arr[0];
+        return 0;
+    }"#
+)]
+#[case::array_access_function_return(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [0, 2, 3];
+        return arr[0];
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
