@@ -113,6 +113,7 @@ pub enum LiteralType {
     Integer(i64),
     Float(f64),
     Identifier(String),
+    ArrayAccess(ArrayAccess),
     String(String),
 }
 
@@ -134,4 +135,13 @@ pub enum OpType {
     Plus,
 }
 
-impl_locatable!(Assignment, Call, Literal, BinaryOperation);
+#[derive(Debug, Clone)]
+pub struct ArrayAccess {
+    pub identifier: Box<Expression>,
+    pub index: Box<Expression>,
+    pub(crate) definition: Option<Definition>,
+    pub(crate) ty: Option<type_system::Type>,
+    location: TokenLocation,
+}
+
+impl_locatable!(Assignment, Call, Literal, BinaryOperation, ArrayAccess);

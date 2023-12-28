@@ -656,6 +656,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                         .as_any_value_enum(),
                 );
             }
+            LiteralType::ArrayAccess(_) => todo!(),
         }
 
         Ok(())

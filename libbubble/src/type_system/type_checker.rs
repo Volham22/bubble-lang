@@ -438,6 +438,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     }
                 }
             }
+            LiteralType::ArrayAccess(_) => todo!(),
         };
 
         Ok(())
