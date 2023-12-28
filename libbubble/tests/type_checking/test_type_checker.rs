@@ -388,6 +388,47 @@ fn type_checker_valid(#[case] code: &str) {
     }"#,
     TypeCheckerError::InferenceError(ast::TokenLocation { line: 0, column: 0, begin: 36, end: 91 })
 )]
+#[case::array_init_missing_values(
+    r#"
+    function main(): i32 {
+        let arr: [4; u32] = [1, 2, 3];
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit {
+        left: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
+        right: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::U32) }
+    },
+)]
+#[case::mix_type_array_init(
+    r#"
+    function main(): i32 {
+        let arr: [3; u32] = [1, false, 3];
+        return 0;
+    }"#,
+    TypeCheckerError::DifferentTypeInArrayInitializer { first: type_system::Type::U32, found: type_system::Type::Bool, position: 1 },
+)]
+#[case::wrong_type_array_init(
+    r#"
+    function main(): i32 {
+        let arr: [3; u32] = [true, true, true];
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit { left: type_system::Type::Array {
+        size: 3,
+        array_type: Box::new(type_system::Type::U32),
+    }, right: type_system::Type::Array {
+        size: 3,
+        array_type: Box::new(type_system::Type::Bool),
+    } },
+)]
+#[case::inference_error_int_type_array_init(
+    r#"
+    function main(): i32 {
+        let arr = [1, 2, 3];
+        return 0;
+    }"#,
+    TypeCheckerError::InferenceError(ast::TokenLocation { line: 0, column: 0, begin: 36, end: 56 }),
+)]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);
 
