@@ -94,6 +94,9 @@ impl PartialEq for TypeCheckerError {
             ) | (
                 TypeCheckerError::DifferentTypeInArrayInitializer { .. },
                 TypeCheckerError::DifferentTypeInArrayInitializer { .. },
+            ) | (
+                TypeCheckerError::NonSubscriptable { .. },
+                TypeCheckerError::NonSubscriptable { .. },
             )
         )
     }
@@ -451,7 +454,21 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 }
             }
             LiteralType::ArrayAccess(_) => {
-                let ty = literal.get_local_variable_def().get_type().clone();
+                let ty = match literal.get_definition() {
+                    Definition::Struct(_) => unreachable!(),
+                    Definition::LocalVariable(_) => {
+                        literal.get_local_variable_def().get_type().clone()
+                    }
+                    Definition::Function(_) => {
+                        if let Type::Function { return_type, .. } =
+                            literal.get_function_def().get_type()
+                        {
+                            return_type.clone().deref().to_owned()
+                        } else {
+                            unreachable!()
+                        }
+                    }
+                };
                 match ty {
                     Type::Array { array_type, .. } => {
                         literal.set_type(array_type.clone().deref().to_owned());

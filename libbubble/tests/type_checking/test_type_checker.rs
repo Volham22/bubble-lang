@@ -444,6 +444,24 @@ fn type_checker_valid(#[case] code: &str) {
     }"#,
     TypeCheckerError::InferenceError(ast::TokenLocation { line: 0, column: 0, begin: 36, end: 56 }),
 )]
+#[case::array_access_non_subscriptable_type(
+    r#"
+    function main(): i32 {
+        let a: i32 = 42;
+        a[0];
+        return 0;
+    }"#,
+    TypeCheckerError::NonSubscriptable{ ty: type_system::Type::I32 },
+)]
+#[case::array_access_non_subscriptable_type_function_return(
+    r#"
+    extern function f(): i32;
+    function main(): i32 {
+        f()[0];
+        return 0;
+    }"#,
+    TypeCheckerError::NonSubscriptable{ ty: type_system::Type::I32 },
+)]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);
 
