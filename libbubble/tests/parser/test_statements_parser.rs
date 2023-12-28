@@ -103,6 +103,14 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::array_declaration_with_type(
+    r#"
+    function f(): i64 {
+        let arr: [4; u32] = [1, 2, 3, 4];
+        return 0;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

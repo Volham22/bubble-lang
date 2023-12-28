@@ -170,6 +170,7 @@ Type: Type = {
     <l:@L> "bool" <r:@R> => Type::new(l, r, TypeKind::Bool),
     <l:@L> "string_ty" <r:@R> => Type::new(l, r, TypeKind::String),
     <l:@L> "void" <r:@R> => Type::new(l, r, TypeKind::Void),
+    <l:@L> "[" <size:"int"> ";" <array_type:Type> "]"  <r:@R> => Type::new(l, r, TypeKind::Array { size: size as u32, array_type: Box::new(array_type) }),
     <l:@L> <val:"identifier"> <r:@R> => Type::new(l, r, TypeKind::Identifier(val)),
 }
 
