@@ -180,8 +180,13 @@ Expr: Expression = {
 }
 
 ArrayInitialization: Expression = {
-    Logic,
+    ArrayAccess,
     <l:@L> "[" <expressions: Comma<Expr>> "]" <r:@R> => Expression::ArrayInitializer(ArrayInitializer::new(l, r, expressions.into_iter().map(Box::new).collect())),
+}
+
+ArrayAccess: Expression = {
+    Logic,
+    <l:@L> <val:Expr> "[" <index: Expr> "]"   <r:@R> => Expression::Literal(Literal::new(l, r, LiteralType::ArrayAccess(ArrayAccess::new(l, r, Box::new(val), Box::new(index))))),
 }
 
 Logic: Expression = {
