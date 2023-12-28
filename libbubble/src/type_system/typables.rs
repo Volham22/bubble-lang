@@ -153,6 +153,7 @@ impl Typable for Expression {
             Expression::Literal(l) => l.get_type(),
             Expression::Call(c) => c.get_type(),
             Expression::Assignment(a) => a.get_type(),
+            Expression::ArrayInitializer(a) => a.get_type(),
         }
     }
 

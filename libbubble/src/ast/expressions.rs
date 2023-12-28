@@ -13,6 +13,7 @@ pub enum Expression {
     Literal(Literal),
     Call(Call),
     Assignment(Assignment),
+    ArrayInitializer(ArrayInitializer),
 }
 
 #[derive(Debug, Clone)]
@@ -161,6 +162,7 @@ impl ArrayAccess {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ArrayInitializer {
     pub values: Vec<Box<Expression>>,
     pub(crate) ty: Option<type_system::Type>,
