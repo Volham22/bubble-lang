@@ -161,4 +161,27 @@ impl ArrayAccess {
     }
 }
 
-impl_locatable!(Assignment, Call, Literal, BinaryOperation, ArrayAccess);
+pub struct ArrayInitializer {
+    pub values: Vec<Box<Expression>>,
+    pub(crate) ty: Option<type_system::Type>,
+    location: TokenLocation,
+}
+
+impl ArrayInitializer {
+    pub fn new(tk_begin: usize, tk_end: usize, values: Vec<Box<Expression>>) -> Self {
+        Self {
+            values,
+            location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
+        }
+    }
+}
+
+impl_locatable!(
+    Assignment,
+    Call,
+    Literal,
+    BinaryOperation,
+    ArrayAccess,
+    ArrayInitializer
+);
