@@ -174,8 +174,13 @@ Type: Type = {
 }
 
 Expr: Expression = {
-    Logic,
+    ArrayInitialization,
     <l:@L> <left:Logic> "=" <right:Logic> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
+}
+
+ArrayInitialization: Expression = {
+    Logic,
+    <l:@L> "[" <expressions: Comma<Expr>> "]" <r:@R> => Expression::ArrayInitializer(ArrayInitializer::new(l, r, expressions.into_iter().map(Box::new).collect())),
 }
 
 Logic: Expression = {
@@ -248,8 +253,8 @@ extern {
     enum Token {
         "(" => Token::LeftParen,
         ")" => Token::RightParen,
-        // "[" => Token::LeftBracket,
-        // "]" => Token::RightBracket,
+        "[" => Token::LeftBracket,
+        "]" => Token::RightBracket,
         "{" => Token::LeftCurlyBracket,
         "}" => Token::RightCurlyBracket,
         "," => Token::Comma,
