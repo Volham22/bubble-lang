@@ -148,6 +148,7 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                 ret.fn_type(&param_ty, false).into()
             }
             type_system::Type::Void => self.context.void_type().into(),
+            type_system::Type::Array { .. } => todo!(),
         }
     }
 

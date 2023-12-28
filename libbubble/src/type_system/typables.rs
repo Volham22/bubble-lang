@@ -30,6 +30,10 @@ pub enum Type {
         parameters: Vec<FunctionParameter>,
         return_type: Box<Type>,
     },
+    Array {
+        size: u32,
+        array_type: Box<Type>,
+    },
     Void,
 }
 
@@ -108,6 +112,10 @@ impl From<ast::TypeKind> for Type {
                 fields: Vec::new(),
             },
             ast::TypeKind::Void => Type::Void,
+            ast::TypeKind::Array { size, array_type } => Type::Array {
+                size,
+                array_type: Box::new(array_type.kind.into()),
+            },
         }
     }
 }

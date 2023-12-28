@@ -21,6 +21,12 @@ impl Type {
     }
 }
 
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeKind {
     U8,
@@ -35,6 +41,7 @@ pub enum TypeKind {
     Bool,
     Float,
     Identifier(String),
+    Array { size: u32, array_type: Box<Type> },
     Void,
 }
 
