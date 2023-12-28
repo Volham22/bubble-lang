@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    Bindable, BreakStatement, Call, ContinueStatement, Definition, ForStatement, FunctionStatement,
-    GlobalStatement, IfStatement, LetStatement, Literal, LiteralType, Locatable, MutableVisitor,
-    ReturnStatement, StructStatement, TokenLocation, Type, TypeKind, WhileStatement,
+    Bindable, BreakStatement, Call, ContinueStatement, Definition, Expression, ForStatement,
+    FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType, Locatable,
+    MutableVisitor, ReturnStatement, StructStatement, TokenLocation, Type, TypeKind,
+    WhileStatement,
 };
 use thiserror::Error;
 
@@ -32,6 +33,8 @@ pub enum BinderError<'ast> {
     BadBreak { location: &'ast TokenLocation },
     #[error("'continue' outside a loop")]
     BadContinue { location: &'ast TokenLocation },
+    #[error("Not subscriptable expression")]
+    NotSubscriptable { location: &'ast TokenLocation },
 }
 
 #[derive(Default)]
@@ -63,6 +66,18 @@ impl Binder {
     fn end_loop(&mut self) {
         self.nested_loop -= 1;
         self.local_variables.delete_scope();
+    }
+
+    fn is_subscriptable(expr: &Expression) -> bool {
+        match expr {
+            Expression::Literal(lit) => {
+                matches!(
+                    lit.literal_type,
+                    LiteralType::Identifier(_) | LiteralType::String(_)
+                )
+            }
+            _ => false,
+        }
     }
 }
 
@@ -190,19 +205,50 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
     }
 
     fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), BinderError<'ast>> {
-        if let LiteralType::Identifier(name) = &expr.literal_type {
-            match self.local_variables.find_symbol(name) {
+        match &expr.literal_type {
+            LiteralType::Identifier(name) => match self.local_variables.find_symbol(name) {
                 Some(var) => {
                     expr.set_definition(Definition::LocalVariable(*var));
                     Ok(())
                 }
-                None => Err(BinderError::UndeclaredVariable {
-                    location: expr.get_location(),
-                    name: name.clone(),
-                }),
+                None => {
+                    return Err(BinderError::UndeclaredVariable {
+                        location: expr.get_location(),
+                        name: name.clone(),
+                    })
+                }
+            },
+            LiteralType::ArrayAccess(array_access)
+                if Self::is_subscriptable(&array_access.identifier) =>
+            {
+                let name = if let Expression::Literal(l) = array_access.identifier.as_ref() {
+                    match &l.literal_type {
+                        LiteralType::Identifier(name) => name,
+                        _ => unreachable!(),
+                    }
+                } else {
+                    unreachable!()
+                };
+
+                match self.local_variables.find_symbol(name) {
+                    Some(var) => {
+                        expr.set_definition(Definition::LocalVariable(*var));
+                        Ok(())
+                    }
+                    None => {
+                        return Err(BinderError::UndeclaredVariable {
+                            location: expr.get_location(),
+                            name: name.clone(),
+                        })
+                    }
+                }
             }
-        } else {
-            Ok(())
+            LiteralType::ArrayAccess(_) => {
+                return Err(BinderError::NotSubscriptable {
+                    location: expr.get_location(),
+                });
+            }
+            _ => Ok(()),
         }
     }
 

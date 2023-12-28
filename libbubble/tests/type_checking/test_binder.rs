@@ -82,6 +82,14 @@ use crate::assets::parse_global_statements_input;
     }
 "#
 )]
+#[case::array_usage(
+    r#"
+       function f() {
+           let a = [true, false, true];
+           a[0];
+       }
+   "#
+)]
 fn test_binding_good(#[case] code: &str) {
     let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
     let mut binder = binder::Binder::default();
