@@ -235,6 +235,14 @@ use crate::assets::run_type_checker;
         return arr[0];
     }"#
 )]
+#[case::array_assign(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [0, 2, 3];
+        arr[0] = 42;
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
