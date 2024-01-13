@@ -510,6 +510,18 @@ fn type_checker_valid(#[case] code: &str) {
         expected_type: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
         got: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::Bool) } }
 )]
+#[case::array_assign_bad_type(
+    r#"
+    function main(): i32 {
+        let arr: [3; bool] = [false, false, false];
+        arr[0] = 42;
+        return 0;
+    }"#,
+    TypeCheckerError::BadAssigment {
+        left: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::Bool)},
+        right: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::U32)},
+    }
+)]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);
 
