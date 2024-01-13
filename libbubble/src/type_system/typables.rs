@@ -78,7 +78,7 @@ impl Type {
                     size: rsize,
                     array_type: rarray_rtype,
                 },
-            ) => lsize == rsize && larray_type.is_compatible_with(&rarray_rtype),
+            ) => lsize == rsize && larray_type.is_compatible_with(rarray_rtype),
             _ => false,
         }
     }
