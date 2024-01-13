@@ -487,6 +487,21 @@ fn type_checker_valid(#[case] code: &str) {
         expected_type: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
         got: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::Bool) } }
 )]
+#[case::array_as_function_parameter_good_type_wrong_size(
+    r#"
+    function f(arr: [4; bool]) {
+        arr[0];
+    }
+    function main(): i32 {
+        let arr: [3; bool] = [false, false, false];
+        f(arr);
+        return 0;
+    }"#,
+    TypeCheckerError::BadParameter {
+        name: "arr".to_string(),
+        expected_type: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
+        got: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::Bool) } }
+)]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);
 
