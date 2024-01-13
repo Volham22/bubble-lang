@@ -176,7 +176,7 @@ Type: Type = {
 
 Expr: Expression = {
     ArrayInitialization,
-    <l:@L> <left:Logic> "=" <right:Logic> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
+    <l:@L> <left:ArrayInitialization> "=" <right:ArrayInitialization> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
 }
 
 ArrayInitialization: Expression = {
@@ -186,7 +186,7 @@ ArrayInitialization: Expression = {
 
 ArrayAccess: Expression = {
     Logic,
-    <l:@L> <val:Expr> "[" <index: Expr> "]"   <r:@R> => Expression::Literal(Literal::new(l, r, LiteralType::ArrayAccess(ArrayAccess::new(l, r, Box::new(val), Box::new(index))))),
+    <l:@L> <val:Logic> "[" <index: Expr> "]"   <r:@R> => Expression::Literal(Literal::new(l, r, LiteralType::ArrayAccess(ArrayAccess::new(l, r, Box::new(val), Box::new(index))))),
 }
 
 Logic: Expression = {
