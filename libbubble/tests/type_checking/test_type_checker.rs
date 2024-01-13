@@ -472,6 +472,21 @@ fn type_checker_valid(#[case] code: &str) {
     }"#,
     TypeCheckerError::NonSubscriptable{ ty: type_system::Type::I32 },
 )]
+#[case::array_as_function_parameter_wrong_type(
+    r#"
+    function f(arr: [4; u32]) {
+        arr[0];
+    }
+    function main(): i32 {
+        let arr: [4; bool] = [false, false, false, false];
+        f(arr);
+        return 0;
+    }"#,
+    TypeCheckerError::BadParameter {
+        name: "arr".to_string(),
+        expected_type: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
+        got: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::Bool) } }
+)]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);
 
