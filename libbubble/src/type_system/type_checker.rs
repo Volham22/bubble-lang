@@ -3,12 +3,16 @@ use std::ops::Deref;
 use thiserror::Error;
 
 use crate::ast::{
-    Assignment, BinaryOperation, Bindable, Call, Definition, Expression, ForStatement,
-    FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType,
-    MutableVisitor, OpType, ReturnStatement, StructStatement, TokenLocation, WhileStatement,
+    ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Definition, Expression,
+    ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
+    LiteralType, MutableVisitor, OpType, ReturnStatement, StructStatement, TokenLocation,
+    WhileStatement,
 };
 
-use super::{inference::IntegerInference, Typable, Type};
+use super::{
+    inference::{ExpressionTypeSetter, IntegerInference},
+    Typable, Type,
+};
 
 pub fn run_type_checker(stmts: &mut [GlobalStatement]) -> Result<(), TypeCheckerError> {
     let mut type_checker = TypeChecker::default();
@@ -49,6 +53,16 @@ pub enum TypeCheckerError {
     ReturnTypeMismatch { got: Type, expected: Type },
     #[error("Can't infer a proper type to the variable. Please, add a type annotation")]
     InferenceError(TokenLocation),
+    #[error("Different type in array initializer. Fisrt type is: {first:?} but found {found:?} at position {position}")]
+    DifferentTypeInArrayInitializer {
+        first: Type,
+        found: Type,
+        position: u32,
+    },
+    #[error("Type {ty:?} is not subscriptable")]
+    NonSubscriptable { ty: Type },
+    #[error("Index type is not integer like. Got: {got:?}")]
+    IndexNotInteger { got: Type },
 }
 
 impl PartialEq for TypeCheckerError {
@@ -82,6 +96,12 @@ impl PartialEq for TypeCheckerError {
             ) | (
                 TypeCheckerError::InferenceError(_),
                 TypeCheckerError::InferenceError(_),
+            ) | (
+                TypeCheckerError::DifferentTypeInArrayInitializer { .. },
+                TypeCheckerError::DifferentTypeInArrayInitializer { .. },
+            ) | (
+                TypeCheckerError::NonSubscriptable { .. },
+                TypeCheckerError::NonSubscriptable { .. },
             )
         )
     }
@@ -375,8 +395,10 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                         | OpType::Divide
                         | OpType::Modulo
                 ) {
+                    expr.set_type(right_ty.clone());
                     self.current_type = Some(right_ty.clone());
                 } else {
+                    expr.set_type(Type::Bool);
                     self.current_type = Some(Type::Bool);
                 }
 
@@ -386,11 +408,18 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             None => match expr.op {
                 OpType::Minus => {
                     self.visit_expression(&mut expr.left)?;
+                    expr.set_type(
+                        self.current_type
+                            .as_ref()
+                            .expect("Expression has no type")
+                            .clone(),
+                    );
                     Ok(())
                 }
                 OpType::Not => {
                     self.visit_expression(&mut expr.left)?;
                     self.current_type = Some(Type::Bool);
+                    expr.set_type(Type::Bool);
                     Ok(())
                 }
                 // This is a bug, and should never happen
@@ -400,7 +429,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
     }
 
     fn visit_literal(&mut self, literal: &'ast mut Literal) -> Result<(), TypeCheckerError> {
-        match literal.literal_type {
+        match &literal.literal_type {
             LiteralType::True | LiteralType::False => {
                 self.current_type = Some(Type::Bool);
                 literal.set_type(Type::Bool);
@@ -438,8 +467,94 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     }
                 }
             }
+            LiteralType::ArrayAccess(_) => {
+                let ty = match literal.get_definition() {
+                    Definition::Struct(_) => unreachable!(),
+                    Definition::LocalVariable(_) => {
+                        literal.get_local_variable_def().get_type().clone()
+                    }
+                    Definition::Function(_) => {
+                        if let Type::Function { return_type, .. } =
+                            literal.get_function_def().get_type()
+                        {
+                            return_type.clone().deref().to_owned()
+                        } else {
+                            unreachable!()
+                        }
+                    }
+                };
+                match ty {
+                    Type::Array { array_type, .. } => {
+                        literal.set_type(array_type.clone().deref().to_owned());
+                    }
+                    _ => return Err(TypeCheckerError::NonSubscriptable { ty }),
+                }
+            }
         };
 
+        // The identifier type should be the array type. We need to do it
+        // here to avoid mutable while the literal is borrowed as ummutable
+        let literal_ty = literal.get_type().clone();
+        if let LiteralType::ArrayAccess(aa) = &mut literal.literal_type {
+            aa.set_type(literal_ty.clone());
+            let mut setter = ExpressionTypeSetter::new(&literal_ty);
+            setter.set_type_recusively(&mut aa.identifier);
+
+            // Index type must be set to int64.
+            // TODO: Get pointer size type on targeted platform
+            self.visit_expression(&mut aa.index)?;
+            let index_type = self.current_type.as_ref().expect("Should have a type");
+            if !index_type.is_integer() {
+                return Err(TypeCheckerError::IndexNotInteger {
+                    got: index_type.clone(),
+                });
+            }
+
+            // Restore array accesss type back
+            self.current_type = Some(literal.get_type().clone());
+        }
+
+        Ok(())
+    }
+
+    fn visit_array_initializer(
+        &mut self,
+        expr: &'ast mut ArrayInitializer,
+    ) -> Result<(), TypeCheckerError> {
+        let first_type = match expr.values.first_mut() {
+            Some(exp) => {
+                self.visit_expression(exp.as_mut())?;
+                self.current_type.clone().expect("Expression has no type")
+            }
+            None => todo!("Handle empty array init"),
+        };
+
+        for (i, exp) in expr.values.iter_mut().enumerate() {
+            self.visit_expression(exp)?;
+
+            if self
+                .current_type
+                .as_ref()
+                .expect("Array expression has no type")
+                != &first_type
+            {
+                return Err(TypeCheckerError::DifferentTypeInArrayInitializer {
+                    first: first_type,
+                    found: self.current_type.clone().unwrap(),
+                    position: i as u32,
+                });
+            }
+        }
+
+        expr.set_type(Type::Array {
+            size: expr.values.len() as u32,
+            array_type: Box::new(first_type.clone()),
+        });
+
+        self.current_type = Some(Type::Array {
+            size: expr.values.len() as u32,
+            array_type: Box::new(first_type),
+        });
         Ok(())
     }
 }

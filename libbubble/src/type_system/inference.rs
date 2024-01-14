@@ -4,7 +4,7 @@ use crate::ast::*;
 
 use super::{type_checker::TypeCheckerError, Typable, Type};
 
-struct ExpressionTypeSetter<'ty> {
+pub(crate) struct ExpressionTypeSetter<'ty> {
     new_type: &'ty Type,
 }
 
@@ -44,6 +44,22 @@ impl<'ast, 'ty> MutableVisitor<'ast, Infallible> for ExpressionTypeSetter<'ty> {
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), Infallible> {
         expr.set_type(self.new_type.clone());
+        Ok(())
+    }
+
+    fn visit_array_initializer(
+        &mut self,
+        expr: &'ast mut ArrayInitializer,
+    ) -> Result<(), Infallible> {
+        for exp in expr.values.iter_mut() {
+            self.visit_expression(exp)?;
+        }
+
+        expr.set_type(Type::Array {
+            size: expr.values.len() as u32,
+            array_type: Box::new(self.new_type.clone()),
+        });
+
         Ok(())
     }
 }
@@ -108,7 +124,11 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
         if self.is_int {
             match stmt.declaration_type {
                 Some(_) => {
-                    let statement_ty = stmt.get_type().clone();
+                    let statement_ty = match stmt.get_type() {
+                        // If it's an array we need to set inner expression type to the base type
+                        Type::Array { array_type, .. } => array_type.as_ref().clone(),
+                        _ => stmt.get_type().clone(),
+                    };
                     let mut setter = ExpressionTypeSetter::new(&statement_ty);
                     setter.set_type_recusively(
                         stmt.init_exp
@@ -193,18 +213,25 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
 
     fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), TypeCheckerError> {
         match expr.literal_type {
-            LiteralType::Integer(_) => {
+            LiteralType::Integer(_) | LiteralType::ArrayAccess(_) => {
                 if let Type::Int = expr.get_type() {
                     self.is_int = true;
                 }
-
-                Ok(())
             }
             _ => {
                 self.is_int = false;
-                Ok(())
+            }
+        };
+
+        // If the index has a type Int. set it to I64.
+        if let LiteralType::ArrayAccess(ArrayAccess { index, .. }) = &mut expr.literal_type {
+            if let Type::Int = index.get_type() {
+                let mut setter = ExpressionTypeSetter::new(&Type::I64);
+                setter.set_type_recusively(index);
             }
         }
+
+        Ok(())
     }
 
     fn visit_binary_operation(
@@ -212,13 +239,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
         expr: &'ast mut BinaryOperation,
     ) -> Result<(), TypeCheckerError> {
         if expr.right.is_none() {
-            self.visit_expression(&mut expr.left)?;
-
-            if self.is_int {
-                unreachable!("Unary type should be infered before");
-            }
-
-            Ok(())
+            self.visit_expression(&mut expr.left)
         } else {
             self.visit_expression(&mut expr.left)?;
             let is_int_left = self.is_int;
@@ -266,6 +287,14 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
             setter.set_type_recusively(&mut expr.right);
         }
 
+        Ok(())
+    }
+
+    fn visit_array_initializer(
+        &mut self,
+        expr: &'ast mut ArrayInitializer,
+    ) -> Result<(), TypeCheckerError> {
+        self.is_int = expr.values.iter().any(|e| e.get_type().is_integer());
         Ok(())
     }
 }

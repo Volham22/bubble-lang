@@ -13,6 +13,13 @@ pub enum Expression {
     Literal(Literal),
     Call(Call),
     Assignment(Assignment),
+    ArrayInitializer(ArrayInitializer),
+}
+
+impl Expression {
+    pub fn is_literal(&self) -> bool {
+        matches!(self, Expression::Literal(_))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -113,6 +120,7 @@ pub enum LiteralType {
     Integer(i64),
     Float(f64),
     Identifier(String),
+    ArrayAccess(ArrayAccess),
     String(String),
 }
 
@@ -134,4 +142,54 @@ pub enum OpType {
     Plus,
 }
 
-impl_locatable!(Assignment, Call, Literal, BinaryOperation);
+#[derive(Debug, Clone)]
+pub struct ArrayAccess {
+    pub identifier: Box<Expression>,
+    pub index: Box<Expression>,
+    pub(crate) definition: Option<Definition>,
+    pub(crate) ty: Option<type_system::Type>,
+    location: TokenLocation,
+}
+
+impl ArrayAccess {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        identifier: Box<Expression>,
+        index: Box<Expression>,
+    ) -> Self {
+        Self {
+            identifier,
+            index,
+            location: TokenLocation::new(tk_begin, tk_end),
+            definition: None,
+            ty: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ArrayInitializer {
+    pub values: Vec<Box<Expression>>,
+    pub(crate) ty: Option<type_system::Type>,
+    location: TokenLocation,
+}
+
+impl ArrayInitializer {
+    pub fn new(tk_begin: usize, tk_end: usize, values: Vec<Box<Expression>>) -> Self {
+        Self {
+            values,
+            location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
+        }
+    }
+}
+
+impl_locatable!(
+    Assignment,
+    Call,
+    Literal,
+    BinaryOperation,
+    ArrayAccess,
+    ArrayInitializer
+);

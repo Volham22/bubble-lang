@@ -1,7 +1,8 @@
 use super::{
-    Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement, Expression, ForStatement,
-    FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, ReturnStatement,
-    Statement, StatementKind, Statements, StructStatement, Type, TypeKind, WhileStatement,
+    ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
+    Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
+    Literal, ReturnStatement, Statement, StatementKind, Statements, StructStatement, Type,
+    TypeKind, WhileStatement,
 };
 
 /// Default AST visitor
@@ -114,6 +115,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             Expression::Literal(l) => self.visit_literal(l),
             Expression::Call(c) => self.visit_call(c),
             Expression::Assignment(a) => self.visit_assignment(a),
+            Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
         }
     }
 
@@ -149,6 +151,14 @@ pub trait Visitor<'ast, E: std::error::Error> {
     fn visit_assignment(&mut self, expr: &'ast Assignment) -> Result<(), E> {
         self.visit_expression(&expr.left)?;
         self.visit_expression(&expr.right)
+    }
+
+    fn visit_array_initializer(&mut self, expr: &'ast ArrayInitializer) -> Result<(), E> {
+        for exp in &expr.values {
+            self.visit_expression(exp.as_ref())?;
+        }
+
+        Ok(())
     }
 }
 
@@ -266,6 +276,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             Expression::Literal(ref mut l) => self.visit_literal(l),
             Expression::Call(ref mut c) => self.visit_call(c),
             Expression::Assignment(ref mut a) => self.visit_assignment(a),
+            Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
         }
     }
 
@@ -278,8 +289,14 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
         Ok(())
     }
 
-    fn visit_literal(&mut self, _: &'ast mut Literal) -> Result<(), E> {
-        Ok(())
+    fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), E> {
+        match &mut expr.literal_type {
+            super::LiteralType::ArrayAccess(aa) => {
+                self.visit_expression(&mut aa.identifier)?;
+                self.visit_expression(&mut aa.index)
+            }
+            _ => Ok(()),
+        }
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), E> {
@@ -301,5 +318,13 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
     fn visit_assignment(&mut self, expr: &'ast mut Assignment) -> Result<(), E> {
         self.visit_expression(&mut expr.left)?;
         self.visit_expression(&mut expr.right)
+    }
+
+    fn visit_array_initializer(&mut self, expr: &'ast mut ArrayInitializer) -> Result<(), E> {
+        for exp in expr.values.iter_mut() {
+            self.visit_expression(exp.as_mut())?;
+        }
+
+        Ok(())
     }
 }

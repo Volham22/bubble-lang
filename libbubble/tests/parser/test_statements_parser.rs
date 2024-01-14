@@ -95,6 +95,41 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::array_declaration(
+    r#"
+    function f(): i64 {
+        let arr = [true, false, true, true];
+        return 0;
+    }
+"#
+)]
+#[case::array_declaration_with_type(
+    r#"
+    function f(): i64 {
+        let arr: [4; u32] = [1, 2, 3, 4];
+        return 0;
+    }
+"#
+)]
+#[case::array_declaration_and_access(
+    r#"
+    function f(): i64 {
+        let arr = [true, false, true, true];
+        arr[0];
+        arr[1];
+        return 0;
+    }
+"#
+)]
+#[case::array_assign(
+    r#"
+    function f(): i64 {
+        let arr: [3; u32] = [1, 2, 3];
+        arr[0] = 42;
+        return 0;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

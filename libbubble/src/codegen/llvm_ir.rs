@@ -13,12 +13,12 @@ use std::{collections::HashMap, convert::Infallible};
 
 use crate::{
     ast::{
-        Assignment, BinaryOperation, BreakStatement, Call, Expression, ForStatement,
-        FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType,
-        OpType, ReturnStatement, StructStatement, Visitor, WhileStatement,
+        ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, Expression,
+        ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
+        LiteralType, OpType, ReturnStatement, StructStatement, Visitor, WhileStatement,
     },
     codegen::locals_collector::SymbolsMap,
-    type_system::{self, Type},
+    type_system::{self, Typable, Type},
 };
 
 use super::Collector;
@@ -148,6 +148,19 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                 ret.fn_type(&param_ty, false).into()
             }
             type_system::Type::Void => self.context.void_type().into(),
+            type_system::Type::Array { size, array_type } => {
+                let base_type = self.to_llvm_type(array_type);
+
+                match base_type {
+                    AnyTypeEnum::ArrayType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::FloatType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::IntType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::PointerType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::StructType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::VectorType(t) => t.array_type(*size).into(),
+                    _ => unreachable!("Type couldn't be an array!"),
+                }
+            }
         }
     }
 
@@ -272,28 +285,70 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 .expect("Let statement has no init exp"),
         )?;
 
-        let store_value = self
-            .variables
-            .get(stmt.name.as_str())
-            .expect("Variable does not exist!");
+        if let Type::Array { array_type, .. } = stmt.get_type() {
+            let Expression::ArrayInitializer(ArrayInitializer { values, .. }) = stmt
+                .init_exp
+                .as_ref()
+                .expect("Array must have init expr")
+                .as_ref()
+            else {
+                unreachable!("Array variable initializer is not an array initializer");
+            };
 
-        self.builder
-            .build_store(
-                *store_value,
-                match self.current_value.unwrap() {
-                    AnyValueEnum::ArrayValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::IntValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::FloatValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::PointerValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::StructValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::VectorValue(v) => v.as_basic_value_enum(),
-                    _ => unreachable!(),
-                },
-            )
-            .expect("Fail to build store");
+            let store_value = *self
+                .variables
+                .get(stmt.name.as_str())
+                .expect("Variable does not exist!");
 
-        self.current_value = Some(store_value.as_any_value_enum());
-        self.variables.insert(&stmt.name, *store_value);
+            let pointee_type = self.to_llvm_type(array_type);
+
+            for (i, exp) in values.iter().enumerate() {
+                self.visit_expression(exp)?;
+
+                let ptr_offset = unsafe {
+                    self.builder
+                        .build_gep(
+                            self.as_basic_type(pointee_type),
+                            store_value,
+                            &[self.context.i64_type().const_int(i as u64, false)],
+                            "array_store_init",
+                        )
+                        .expect("Fail to build array init GEP")
+                };
+
+                self.builder
+                    .build_store(
+                        ptr_offset,
+                        self.as_basic_value(
+                            self.current_value.expect("Array expression has no value"),
+                        ),
+                    )
+                    .expect("Fail to build array init store");
+            }
+        } else {
+            let store_value = self
+                .variables
+                .get(stmt.name.as_str())
+                .expect("Variable does not exist!");
+
+            self.builder
+                .build_store(
+                    *store_value,
+                    match self.current_value.unwrap() {
+                        AnyValueEnum::ArrayValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::IntValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::FloatValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::PointerValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::StructValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::VectorValue(v) => v.as_basic_value_enum(),
+                        _ => unreachable!(),
+                    },
+                )
+                .expect("Fail to build store");
+
+            self.current_value = Some(store_value.as_any_value_enum());
+            self.variables.insert(&stmt.name, *store_value);
+        }
 
         Ok(())
     }
@@ -378,7 +433,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
     }
 
     fn visit_for(&mut self, _stmt: &'ast ForStatement) -> Result<(), Infallible> {
-        todo!("for desugar")
+        unreachable!("for desugar")
     }
 
     fn visit_return(&mut self, stmt: &'ast ReturnStatement) -> Result<(), Infallible> {
@@ -637,10 +692,11 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                     .get(id.as_str())
                     .expect("variable not found!");
 
+                println!("Statement: {:?}", stmt);
                 self.current_value = Some(
                     self.builder
                         .build_load(
-                            self.as_basic_type(self.to_llvm_type(stmt.ty.as_ref().unwrap())),
+                            self.as_basic_type(self.to_llvm_type(stmt.get_type())),
                             *ptr,
                             "load",
                         )
@@ -654,6 +710,58 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                         .build_global_string_ptr(content.as_str(), "string_literal")
                         .expect("Fail to build global string ptr")
                         .as_any_value_enum(),
+                );
+            }
+            LiteralType::ArrayAccess(array_access) => {
+                // Translate and get array llvm value (array ptr)
+                self.visit_expression(&array_access.identifier)?;
+                let pointee_ty = self.as_basic_type(self.to_llvm_type(array_access.get_type()));
+
+                // If it's a literal we can't visit the expression because we need
+                // a pointer like type. Visiting the expression would give us the pointee value
+                let ptr_value = match array_access.identifier.as_ref() {
+                    Expression::Literal(Literal {
+                        literal_type: LiteralType::Identifier(name),
+                        ..
+                    }) => *self
+                        .variables
+                        .get(name.as_str())
+                        .expect("Variable does not exist"),
+                    _ => {
+                        self.visit_expression(&array_access.identifier)?;
+                        self.current_value
+                            .as_ref()
+                            .expect("Array access has no value")
+                            .into_pointer_value()
+                    }
+                };
+
+                // Translate and store index expression
+                self.visit_expression(&array_access.index)?;
+                let index_value = self
+                    .current_value
+                    .as_ref()
+                    .expect("Array access index has no value")
+                    .into_int_value();
+
+                // Compute offset with getelementptr
+                let load_ptr_value = unsafe {
+                    self.builder
+                        .build_gep(
+                            pointee_ty,
+                            ptr_value,
+                            &[index_value],
+                            "load_ptr_array_access",
+                        )
+                        .expect("Fail to build gep for array access")
+                };
+
+                // Load it as usual
+                self.current_value = Some(
+                    self.builder
+                        .build_load(pointee_ty, load_ptr_value, "array_acess_load")
+                        .expect("Fail to build array access load")
+                        .into(),
                 );
             }
         }

@@ -189,6 +189,71 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::for_index_iterate_array(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [1, 2, 3];
+        for i: i32 = 0; i < 3; i = i + 1 {
+            arr[i];
+        }
+
+        return 0;
+    }"#
+)]
+#[case::array_init_bool_inference(
+    r#"
+    function main(): i32 {
+        let arr = [true, true, true];
+        return 0;
+    }"#
+)]
+#[case::array_init_bool_with_type(
+    r#"
+    function main(): i32 {
+        let arr: [3; bool] = [true, true, true];
+        return 0;
+    }"#
+)]
+#[case::array_init_int_with_type(
+    r#"
+    function main(): i32 {
+        let arr: [3; u32] = [1, 2, 3];
+        return 0;
+    }"#
+)]
+#[case::array_access(
+    r#"
+    function main(): i32 {
+        let arr: [3; u32] = [1, 2, 3];
+        arr[0];
+        return 0;
+    }"#
+)]
+#[case::array_access_function_return(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [0, 2, 3];
+        return arr[0];
+    }"#
+)]
+#[case::array_as_function_parameter(
+    r#"
+    function f(arr: [4; u32]) {
+        arr[0];
+    }
+    function main(): i32 {
+        let arr: [3; i32] = [0, 2, 3];
+        return arr[0];
+    }"#
+)]
+#[case::array_assign(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [0, 2, 3];
+        arr[0] = 42;
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -366,6 +431,107 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::InferenceError(ast::TokenLocation { line: 0, column: 0, begin: 36, end: 91 })
+)]
+#[case::array_init_missing_values(
+    r#"
+    function main(): i32 {
+        let arr: [4; u32] = [1, 2, 3];
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit {
+        left: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
+        right: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::U32) }
+    },
+)]
+#[case::mix_type_array_init(
+    r#"
+    function main(): i32 {
+        let arr: [3; u32] = [1, false, 3];
+        return 0;
+    }"#,
+    TypeCheckerError::DifferentTypeInArrayInitializer { first: type_system::Type::U32, found: type_system::Type::Bool, position: 1 },
+)]
+#[case::wrong_type_array_init(
+    r#"
+    function main(): i32 {
+        let arr: [3; u32] = [true, true, true];
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit { left: type_system::Type::Array {
+        size: 3,
+        array_type: Box::new(type_system::Type::U32),
+    }, right: type_system::Type::Array {
+        size: 3,
+        array_type: Box::new(type_system::Type::Bool),
+    } },
+)]
+#[case::inference_error_int_type_array_init(
+    r#"
+    function main(): i32 {
+        let arr = [1, 2, 3];
+        return 0;
+    }"#,
+    TypeCheckerError::InferenceError(ast::TokenLocation { line: 0, column: 0, begin: 36, end: 56 }),
+)]
+#[case::array_access_non_subscriptable_type(
+    r#"
+    function main(): i32 {
+        let a: i32 = 42;
+        a[0];
+        return 0;
+    }"#,
+    TypeCheckerError::NonSubscriptable{ ty: type_system::Type::I32 },
+)]
+#[case::array_access_non_subscriptable_type_function_return(
+    r#"
+    extern function f(): i32;
+    function main(): i32 {
+        f()[0];
+        return 0;
+    }"#,
+    TypeCheckerError::NonSubscriptable{ ty: type_system::Type::I32 },
+)]
+#[case::array_as_function_parameter_wrong_type(
+    r#"
+    function f(arr: [4; u32]) {
+        arr[0];
+    }
+    function main(): i32 {
+        let arr: [4; bool] = [false, false, false, false];
+        f(arr);
+        return 0;
+    }"#,
+    TypeCheckerError::BadParameter {
+        name: "arr".to_string(),
+        expected_type: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
+        got: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::Bool) } }
+)]
+#[case::array_as_function_parameter_good_type_wrong_size(
+    r#"
+    function f(arr: [4; bool]) {
+        arr[0];
+    }
+    function main(): i32 {
+        let arr: [3; bool] = [false, false, false];
+        f(arr);
+        return 0;
+    }"#,
+    TypeCheckerError::BadParameter {
+        name: "arr".to_string(),
+        expected_type: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
+        got: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::Bool) } }
+)]
+#[case::array_assign_bad_type(
+    r#"
+    function main(): i32 {
+        let arr: [3; bool] = [false, false, false];
+        arr[0] = 42;
+        return 0;
+    }"#,
+    TypeCheckerError::BadAssigment {
+        left: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::Bool)},
+        right: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::U32)},
+    }
 )]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);

@@ -82,10 +82,28 @@ use crate::assets::parse_global_statements_input;
     }
 "#
 )]
+#[case::array_usage(
+    r#"
+       function f() {
+           let a = [true, false, true];
+           a[0];
+       }
+   "#
+)]
+#[case::array_usage_lvalue_call(
+    r#"
+       extern function g(): u32;
+
+       function f() {
+           g()[0];
+       }
+   "#
+)]
 fn test_binding_good(#[case] code: &str) {
     let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
     let mut binder = binder::Binder::default();
-    assert!(binder.bind_statements(&mut stmts).is_ok());
+    let result = binder.bind_statements(&mut stmts);
+    assert!(result.is_ok(), "got: {:?}", result.unwrap_err());
 }
 
 #[rstest]
@@ -144,6 +162,13 @@ fn test_binding_good(#[case] code: &str) {
        function f() {
            let a = 2;
            a();
+       }
+   "#
+)]
+#[case::expr_subscriptable(
+    r#"
+       function f() {
+           42[0];
        }
    "#
 )]

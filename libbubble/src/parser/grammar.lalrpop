@@ -170,12 +170,23 @@ Type: Type = {
     <l:@L> "bool" <r:@R> => Type::new(l, r, TypeKind::Bool),
     <l:@L> "string_ty" <r:@R> => Type::new(l, r, TypeKind::String),
     <l:@L> "void" <r:@R> => Type::new(l, r, TypeKind::Void),
+    <l:@L> "[" <size:"int"> ";" <array_type:Type> "]"  <r:@R> => Type::new(l, r, TypeKind::Array { size: size as u32, array_type: Box::new(array_type) }),
     <l:@L> <val:"identifier"> <r:@R> => Type::new(l, r, TypeKind::Identifier(val)),
 }
 
 Expr: Expression = {
+    ArrayInitialization,
+    <l:@L> <left:ArrayInitialization> "=" <right:ArrayInitialization> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
+}
+
+ArrayInitialization: Expression = {
+    ArrayAccess,
+    <l:@L> "[" <expressions: Comma<Expr>> "]" <r:@R> => Expression::ArrayInitializer(ArrayInitializer::new(l, r, expressions.into_iter().map(Box::new).collect())),
+}
+
+ArrayAccess: Expression = {
     Logic,
-    <l:@L> <left:Logic> "=" <right:Logic> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
+    <l:@L> <val:Logic> "[" <index: Expr> "]"   <r:@R> => Expression::Literal(Literal::new(l, r, LiteralType::ArrayAccess(ArrayAccess::new(l, r, Box::new(val), Box::new(index))))),
 }
 
 Logic: Expression = {
@@ -248,8 +259,8 @@ extern {
     enum Token {
         "(" => Token::LeftParen,
         ")" => Token::RightParen,
-        // "[" => Token::LeftBracket,
-        // "]" => Token::RightBracket,
+        "[" => Token::LeftBracket,
+        "]" => Token::RightBracket,
         "{" => Token::LeftCurlyBracket,
         "}" => Token::RightCurlyBracket,
         "," => Token::Comma,

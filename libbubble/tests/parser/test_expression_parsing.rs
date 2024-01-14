@@ -42,6 +42,9 @@ use rstest::rstest;
 #[case::call_one_arg("f(42)")]
 #[case::call_multiples_args("f(42, 3, false, true, 21 + 32)")]
 #[case::call_multiples_args_trailing_comma("f(42, 3, false, true, 21 + 32,)")]
+#[case::array_access("array[1]")]
+#[case::array_access_with_sub_expr("array[1 + 1]")]
+#[case::array_access_with_call("array[f(12)]")]
 fn test_valid_expression(#[case] code: &str) {
     let parser_result = parse_statements_input(code);
     assert!(

@@ -230,6 +230,12 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
             super::LiteralType::Float(f) => self.write(&f.to_string()),
             super::LiteralType::Identifier(id) => self.write(id),
             super::LiteralType::String(content) => self.write(&format!("\"{}\"", content)),
+            super::LiteralType::ArrayAccess(aa) => {
+                self.visit_expression(&aa.identifier)?;
+                self.write("[")?;
+                self.visit_expression(&aa.index)?;
+                self.write("]")
+            }
         }
     }
 
@@ -259,7 +265,12 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
             TypeKind::String => self.write("string"),
             TypeKind::Bool => self.write("bool"),
             TypeKind::Identifier(id) => self.write(id),
-            TypeKind::Void => self.write("<void>"), // void does not exists
+            TypeKind::Void => self.write("<void>"),
+            TypeKind::Array { size, array_type } => {
+                self.write("[")?;
+                self.visit_type(array_type.as_ref())?;
+                self.write(&format!("; {}]", size))
+            } // void does not exists
         }
     }
 

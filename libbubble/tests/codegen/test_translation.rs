@@ -133,6 +133,45 @@ use crate::assets::build_and_link;
     "/tmp/parameter_int_type_inference",
     0
 )]
+#[case::array_init(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [1, 2, 3];
+        return 0;
+}"#,
+    "/tmp/array_init",
+    0
+)]
+#[case::array_access(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [1, 2, 3];
+        arr[0];
+        return 0;
+}"#,
+    "/tmp/array_access",
+    0
+)]
+#[case::array_access_as_return_value(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [0, 2, 3];
+        return arr[0];
+}"#,
+    "/tmp/array_access_as_return_value",
+    0
+)]
+#[case::expression_as_index(
+    r#"
+    function main(): i32 {
+        let a: i32 = 2;
+        let b: i32 = -2;
+        let arr: [3; i32] = [0, 2, 3];
+        return arr[a + b];
+}"#,
+    "/tmp/expression_as_index",
+    0
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,
@@ -233,6 +272,20 @@ fn test_translation(
     "/tmp/for_variable_condition_always_false",
     0,
     ""
+)]
+#[case::print_array_content(
+    r#"
+    extern function printf(msg: string, value: i32): i32;
+    function main(): i32 {
+        let arr: [3; i32] = [1, 2, 3];
+        for i: i32 = 0; i < 3; i = i + 1 {
+            printf("%d", arr[i]);
+        }
+        return 0;
+    }"#,
+    "/tmp/print_array_content",
+    0,
+    "123"
 )]
 fn test_translation_with_stdout(
     #[case] code: &str,
