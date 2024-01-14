@@ -9,7 +9,10 @@ use crate::ast::{
     WhileStatement,
 };
 
-use super::{inference::IntegerInference, Typable, Type};
+use super::{
+    inference::{ExpressionTypeSetter, IntegerInference},
+    Typable, Type,
+};
 
 pub fn run_type_checker(stmts: &mut [GlobalStatement]) -> Result<(), TypeCheckerError> {
     let mut type_checker = TypeChecker::default();
@@ -58,6 +61,8 @@ pub enum TypeCheckerError {
     },
     #[error("Type {ty:?} is not subscriptable")]
     NonSubscriptable { ty: Type },
+    #[error("Index type is not integer like. Got: {got:?}")]
+    IndexNotInteger { got: Type },
 }
 
 impl PartialEq for TypeCheckerError {
@@ -415,7 +420,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
     }
 
     fn visit_literal(&mut self, literal: &'ast mut Literal) -> Result<(), TypeCheckerError> {
-        match literal.literal_type {
+        match &literal.literal_type {
             LiteralType::True | LiteralType::False => {
                 self.current_type = Some(Type::Bool);
                 literal.set_type(Type::Bool);
@@ -472,12 +477,33 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 match ty {
                     Type::Array { array_type, .. } => {
                         literal.set_type(array_type.clone().deref().to_owned());
-                        self.current_type = Some(array_type.clone().deref().to_owned());
                     }
                     _ => return Err(TypeCheckerError::NonSubscriptable { ty }),
                 }
             }
         };
+
+        // The identifier type should be the array type. We need to do it
+        // here to avoid mutable while the literal is borrowed as ummutable
+        let literal_ty = literal.get_type().clone();
+        if let LiteralType::ArrayAccess(aa) = &mut literal.literal_type {
+            aa.set_type(literal_ty.clone());
+            let mut setter = ExpressionTypeSetter::new(&literal_ty);
+            setter.set_type_recusively(&mut aa.identifier);
+
+            // Index type must be set to int64.
+            // TODO: Get pointer size type on targeted platform
+            self.visit_expression(&mut aa.index)?;
+            let index_type = self.current_type.as_ref().expect("Should have a type");
+            if !index_type.is_integer() {
+                return Err(TypeCheckerError::IndexNotInteger {
+                    got: index_type.clone(),
+                });
+            }
+
+            // Restore array accesss type back
+            self.current_type = Some(literal.get_type().clone());
+        }
 
         Ok(())
     }
@@ -511,7 +537,10 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             }
         }
 
-        expr.set_type(Type::Array { size: expr.values.len() as u32, array_type: Box::new(first_type.clone()) });
+        expr.set_type(Type::Array {
+            size: expr.values.len() as u32,
+            array_type: Box::new(first_type.clone()),
+        });
 
         self.current_type = Some(Type::Array {
             size: expr.values.len() as u32,
