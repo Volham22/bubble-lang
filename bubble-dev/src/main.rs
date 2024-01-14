@@ -8,11 +8,12 @@ use inkwell::{
 use libbubble::{
     ast::GlobalStatement,
     codegen::build_module,
+    desugar::desugar_ast,
     parser::{
         grammar::GlobalStatementsParser,
         lexer::{Lexer, LexicalError, Token},
     },
-    type_system::{binder::Binder, run_type_checker}, desugar::desugar_ast,
+    type_system::{binder::Binder, run_type_checker},
 };
 
 pub type StatementsParserResult<T> =
@@ -34,7 +35,7 @@ fn main() {
     let mut binder = Binder::default();
     binder.bind_statements(&mut stmts).expect("Binder failed");
     run_type_checker(&mut stmts).expect("Type checker failed");
-    stmts =desugar_ast(stmts);
+    stmts = desugar_ast(stmts);
 
     let context = Context::create();
     let module = context.create_module("module");

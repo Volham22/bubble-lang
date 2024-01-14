@@ -294,8 +294,8 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             super::LiteralType::ArrayAccess(aa) => {
                 self.visit_expression(&mut aa.identifier)?;
                 self.visit_expression(&mut aa.index)
-            },
-            _ => Ok(())
+            }
+            _ => Ok(()),
         }
     }
 

@@ -419,9 +419,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 OpType::Not => {
                     self.visit_expression(&mut expr.left)?;
                     self.current_type = Some(Type::Bool);
-                    expr.set_type(
-                        Type::Bool
-                    );
+                    expr.set_type(Type::Bool);
                     Ok(())
                 }
                 // This is a bug, and should never happen
