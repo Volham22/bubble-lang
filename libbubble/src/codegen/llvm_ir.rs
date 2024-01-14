@@ -433,7 +433,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
     }
 
     fn visit_for(&mut self, _stmt: &'ast ForStatement) -> Result<(), Infallible> {
-        todo!("for desugar")
+        unreachable!("for desugar")
     }
 
     fn visit_return(&mut self, stmt: &'ast ReturnStatement) -> Result<(), Infallible> {
@@ -760,7 +760,8 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 self.current_value = Some(
                     self.builder
                         .build_load(pointee_ty, load_ptr_value, "array_acess_load")
-                        .expect("Fail to build array access load").into(),
+                        .expect("Fail to build array access load")
+                        .into(),
                 );
             }
         }
