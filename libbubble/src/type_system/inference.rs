@@ -4,13 +4,17 @@ use crate::ast::*;
 
 use super::{type_checker::TypeCheckerError, Typable, Type};
 
-struct ExpressionTypeSetter<'ty> {
+pub(crate) struct ExpressionTypeSetter<'ty> {
     new_type: &'ty Type,
 }
 
 impl<'ty> ExpressionTypeSetter<'ty> {
     pub fn new(new_type: &'ty Type) -> Self {
         Self { new_type }
+    }
+
+    pub fn set_new_type(&mut self, new_ty: &'ty Type) {
+        self.new_type = new_ty;
     }
 
     pub fn set_type_recusively(&mut self, expr: &mut Expression) {
@@ -214,18 +218,25 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
 
     fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), TypeCheckerError> {
         match expr.literal_type {
-            LiteralType::Integer(_) => {
+            LiteralType::Integer(_) | LiteralType::ArrayAccess(_) => {
                 if let Type::Int = expr.get_type() {
                     self.is_int = true;
                 }
-
-                Ok(())
             }
             _ => {
                 self.is_int = false;
-                Ok(())
+            }
+        };
+
+        // If the index has a type Int. set it to I64.
+        if let LiteralType::ArrayAccess(ArrayAccess { index, .. }) = &mut expr.literal_type {
+            if let Type::Int = index.get_type() {
+                let mut setter = ExpressionTypeSetter::new(&Type::I64);
+                setter.set_type_recusively(index);
             }
         }
+
+        Ok(())
     }
 
     fn visit_binary_operation(
