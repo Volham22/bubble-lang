@@ -133,6 +133,15 @@ use crate::assets::build_and_link;
     "/tmp/parameter_int_type_inference",
     0
 )]
+#[case::array_init(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [1, 2, 3];
+        return 0;
+}"#,
+    "/tmp/array_init",
+    0
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,

@@ -13,12 +13,12 @@ use std::{collections::HashMap, convert::Infallible};
 
 use crate::{
     ast::{
-        Assignment, BinaryOperation, BreakStatement, Call, Expression, ForStatement,
-        FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType,
-        OpType, ReturnStatement, StructStatement, Visitor, WhileStatement,
+        ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, Expression,
+        ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
+        LiteralType, OpType, ReturnStatement, StructStatement, Visitor, WhileStatement,
     },
     codegen::locals_collector::SymbolsMap,
-    type_system::{self, Type},
+    type_system::{self, Typable, Type},
 };
 
 use super::Collector;
@@ -148,7 +148,19 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                 ret.fn_type(&param_ty, false).into()
             }
             type_system::Type::Void => self.context.void_type().into(),
-            type_system::Type::Array { .. } => todo!(),
+            type_system::Type::Array { size, array_type } => {
+                let base_type = self.to_llvm_type(array_type);
+
+                match base_type {
+                    AnyTypeEnum::ArrayType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::FloatType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::IntType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::PointerType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::StructType(t) => t.array_type(*size).into(),
+                    AnyTypeEnum::VectorType(t) => t.array_type(*size).into(),
+                    _ => unreachable!("Type couldn't be an array!"),
+                }
+            }
         }
     }
 
@@ -273,28 +285,70 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 .expect("Let statement has no init exp"),
         )?;
 
-        let store_value = self
-            .variables
-            .get(stmt.name.as_str())
-            .expect("Variable does not exist!");
+        if let Type::Array { array_type, .. } = stmt.get_type() {
+            let Expression::ArrayInitializer(ArrayInitializer { values, .. }) = stmt
+                .init_exp
+                .as_ref()
+                .expect("Array must have init expr")
+                .as_ref()
+            else {
+                unreachable!("Array variable initializer is not an array initializer");
+            };
 
-        self.builder
-            .build_store(
-                *store_value,
-                match self.current_value.unwrap() {
-                    AnyValueEnum::ArrayValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::IntValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::FloatValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::PointerValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::StructValue(v) => v.as_basic_value_enum(),
-                    AnyValueEnum::VectorValue(v) => v.as_basic_value_enum(),
-                    _ => unreachable!(),
-                },
-            )
-            .expect("Fail to build store");
+            let store_value = *self
+                .variables
+                .get(stmt.name.as_str())
+                .expect("Variable does not exist!");
 
-        self.current_value = Some(store_value.as_any_value_enum());
-        self.variables.insert(&stmt.name, *store_value);
+            let pointee_type = self.to_llvm_type(array_type);
+
+            for (i, exp) in values.iter().enumerate() {
+                self.visit_expression(exp)?;
+
+                let ptr_offset = unsafe {
+                    self.builder
+                        .build_gep(
+                            self.as_basic_type(pointee_type),
+                            store_value,
+                            &[self.context.i64_type().const_int(i as u64, false)],
+                            "array_store_init",
+                        )
+                        .expect("Fail to build array init GEP")
+                };
+
+                self.builder
+                    .build_store(
+                        ptr_offset,
+                        self.as_basic_value(
+                            self.current_value.expect("Array expression has no value"),
+                        ),
+                    )
+                    .expect("Fail to build array init store");
+            }
+        } else {
+            let store_value = self
+                .variables
+                .get(stmt.name.as_str())
+                .expect("Variable does not exist!");
+
+            self.builder
+                .build_store(
+                    *store_value,
+                    match self.current_value.unwrap() {
+                        AnyValueEnum::ArrayValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::IntValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::FloatValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::PointerValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::StructValue(v) => v.as_basic_value_enum(),
+                        AnyValueEnum::VectorValue(v) => v.as_basic_value_enum(),
+                        _ => unreachable!(),
+                    },
+                )
+                .expect("Fail to build store");
+
+            self.current_value = Some(store_value.as_any_value_enum());
+            self.variables.insert(&stmt.name, *store_value);
+        }
 
         Ok(())
     }
