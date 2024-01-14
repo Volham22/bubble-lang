@@ -16,6 +16,12 @@ pub enum Expression {
     ArrayInitializer(ArrayInitializer),
 }
 
+impl Expression {
+    pub fn is_literal(&self) -> bool {
+        matches!(self, Expression::Literal(_))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Assignment {
     pub left: Box<Expression>,
