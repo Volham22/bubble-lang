@@ -262,6 +262,20 @@ fn test_translation(
     0,
     ""
 )]
+#[case::print_array_content(
+    r#"
+    extern function printf(msg: string, value: i32): i32;
+    function main(): i32 {
+        let arr: [3; i32] = [1, 2, 3];
+        for i: i32 = 0; i < 3; i = i + 1 {
+            printf("%d", arr[i]);
+        }
+        return 0;
+    }"#,
+    "/tmp/print_array_content",
+    0,
+    "123"
+)]
 fn test_translation_with_stdout(
     #[case] code: &str,
     #[case] executable_path: &str,

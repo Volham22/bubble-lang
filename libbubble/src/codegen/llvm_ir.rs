@@ -757,9 +757,11 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 };
 
                 // Load it as usual
-                self.builder
-                    .build_load(pointee_ty, load_ptr_value, "array_acess_load")
-                    .expect("Fail to build array access load");
+                self.current_value = Some(
+                    self.builder
+                        .build_load(pointee_ty, load_ptr_value, "array_acess_load")
+                        .expect("Fail to build array access load").into(),
+                );
             }
         }
 
