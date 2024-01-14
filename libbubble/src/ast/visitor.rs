@@ -289,8 +289,14 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
         Ok(())
     }
 
-    fn visit_literal(&mut self, _: &'ast mut Literal) -> Result<(), E> {
-        Ok(())
+    fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), E> {
+        match &mut expr.literal_type {
+            super::LiteralType::ArrayAccess(aa) => {
+                self.visit_expression(&mut aa.identifier)?;
+                self.visit_expression(&mut aa.index)
+            },
+            _ => Ok(())
+        }
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), E> {

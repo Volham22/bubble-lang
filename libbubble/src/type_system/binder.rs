@@ -252,6 +252,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         // Bind the array access identifier too
         if let LiteralType::ArrayAccess(aa) = &mut expr.literal_type {
             self.visit_expression(&mut aa.identifier)?;
+            self.visit_expression(&mut aa.index)?;
         }
 
         Ok(())

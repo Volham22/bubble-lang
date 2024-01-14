@@ -189,6 +189,17 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::for_index_iterate_array(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [1, 2, 3];
+        for i: i32 = 0; i < 3; i = i + 1 {
+            arr[i];
+        }
+
+        return 0;
+    }"#
+)]
 #[case::array_init_bool_inference(
     r#"
     function main(): i32 {
