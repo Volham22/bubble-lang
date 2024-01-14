@@ -13,10 +13,6 @@ impl<'ty> ExpressionTypeSetter<'ty> {
         Self { new_type }
     }
 
-    pub fn set_new_type(&mut self, new_ty: &'ty Type) {
-        self.new_type = new_ty;
-    }
-
     pub fn set_type_recusively(&mut self, expr: &mut Expression) {
         self.visit_expression(expr).expect("Should never fail");
     }
