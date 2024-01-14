@@ -208,7 +208,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
     fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), BinderError<'ast>> {
         match &expr.literal_type {
             LiteralType::Identifier(name) => match self.local_variables.find_symbol(name) {
-                Some(var) => Ok(expr.set_definition(Definition::LocalVariable(*var))),
+                Some(var) => expr.set_definition(Definition::LocalVariable(*var)),
                 None => {
                     return Err(BinderError::UndeclaredVariable {
                         location: expr.get_location(),
@@ -229,9 +229,9 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
                 };
 
                 match self.local_variables.find_symbol(name) {
-                    Some(var) => Ok(expr.set_definition(Definition::LocalVariable(*var))),
+                    Some(var) => expr.set_definition(Definition::LocalVariable(*var)),
                     None => match self.functions_statements.get(name) {
-                        Some(f) => Ok(expr.set_definition(Definition::Function(*f))),
+                        Some(f) => expr.set_definition(Definition::Function(*f)),
                         None => {
                             return Err(BinderError::UndeclaredVariable {
                                 location: expr.get_location(),
@@ -246,8 +246,15 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
                     location: expr.get_location(),
                 });
             }
-            _ => Ok(()),
+            _ => (),
+        };
+
+        // Bind the array access identifier too
+        if let LiteralType::ArrayAccess(aa) = &mut expr.literal_type {
+            self.visit_expression(&mut aa.identifier)?;
         }
+
+        Ok(())
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), BinderError<'ast>> {
