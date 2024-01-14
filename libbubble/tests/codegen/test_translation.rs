@@ -161,6 +161,17 @@ use crate::assets::build_and_link;
     "/tmp/array_access_as_return_value",
     0
 )]
+#[case::expression_as_index(
+    r#"
+    function main(): i32 {
+        let a: i32 = 2;
+        let b: i32 = -2;
+        let arr: [3; i32] = [0, 2, 3];
+        return arr[a + b];
+}"#,
+    "/tmp/expression_as_index",
+    0
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,

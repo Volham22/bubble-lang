@@ -129,7 +129,6 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
                         Type::Array { array_type, .. } => array_type.as_ref().clone(),
                         _ => stmt.get_type().clone(),
                     };
-                    println!("Set int type: {:?}", statement_ty);
                     let mut setter = ExpressionTypeSetter::new(&statement_ty);
                     setter.set_type_recusively(
                         stmt.init_exp
@@ -240,13 +239,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
         expr: &'ast mut BinaryOperation,
     ) -> Result<(), TypeCheckerError> {
         if expr.right.is_none() {
-            self.visit_expression(&mut expr.left)?;
-
-            if self.is_int {
-                unreachable!("Unary type should be infered before");
-            }
-
-            Ok(())
+            self.visit_expression(&mut expr.left)
         } else {
             self.visit_expression(&mut expr.left)?;
             let is_int_left = self.is_int;
