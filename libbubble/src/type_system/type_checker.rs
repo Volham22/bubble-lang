@@ -511,6 +511,8 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             }
         }
 
+        expr.set_type(Type::Array { size: expr.values.len() as u32, array_type: Box::new(first_type.clone()) });
+
         self.current_type = Some(Type::Array {
             size: expr.values.len() as u32,
             array_type: Box::new(first_type),

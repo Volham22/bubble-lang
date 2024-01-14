@@ -46,6 +46,22 @@ impl<'ast, 'ty> MutableVisitor<'ast, Infallible> for ExpressionTypeSetter<'ty> {
         expr.set_type(self.new_type.clone());
         Ok(())
     }
+
+    fn visit_array_initializer(
+        &mut self,
+        expr: &'ast mut ArrayInitializer,
+    ) -> Result<(), Infallible> {
+        for exp in expr.values.iter_mut() {
+            self.visit_expression(exp)?;
+        }
+
+        expr.set_type(Type::Array {
+            size: expr.values.len() as u32,
+            array_type: Box::new(self.new_type.clone()),
+        });
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Default)]
@@ -108,7 +124,12 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
         if self.is_int {
             match stmt.declaration_type {
                 Some(_) => {
-                    let statement_ty = stmt.get_type().clone();
+                    let statement_ty = match stmt.get_type() {
+                        // If it's an array we need to set inner expression type to the base type
+                        Type::Array { array_type, .. } => array_type.as_ref().clone(),
+                        _ => stmt.get_type().clone(),
+                    };
+                    println!("Set int type: {:?}", statement_ty);
                     let mut setter = ExpressionTypeSetter::new(&statement_ty);
                     setter.set_type_recusively(
                         stmt.init_exp
@@ -266,6 +287,14 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
             setter.set_type_recusively(&mut expr.right);
         }
 
+        Ok(())
+    }
+
+    fn visit_array_initializer(
+        &mut self,
+        expr: &'ast mut ArrayInitializer,
+    ) -> Result<(), TypeCheckerError> {
+        self.is_int = expr.values.iter().any(|e| e.get_type().is_integer());
         Ok(())
     }
 }
