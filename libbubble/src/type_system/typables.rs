@@ -101,6 +101,16 @@ impl Type {
     pub fn is_signed(&self) -> bool {
         matches!(self, Type::I8 | Type::I16 | Type::I32 | Type::I64)
     }
+
+    /// Return array base type.
+    /// # Panics
+    /// This method panic if the type is not an array
+    pub fn get_base_array_type(&self) -> &Type {
+        match self {
+            Type::Array { array_type, .. } => array_type,
+            _ => panic!("Call get_base_array_type on a type that is not an array!"),
+        }
+    }
 }
 
 impl From<ast::TypeKind> for Type {
