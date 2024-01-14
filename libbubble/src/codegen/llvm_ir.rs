@@ -692,10 +692,11 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                     .get(id.as_str())
                     .expect("variable not found!");
 
+                println!("Statement: {:?}", stmt);
                 self.current_value = Some(
                     self.builder
                         .build_load(
-                            self.as_basic_type(self.to_llvm_type(stmt.ty.as_ref().unwrap())),
+                            self.as_basic_type(self.to_llvm_type(stmt.get_type())),
                             *ptr,
                             "load",
                         )
@@ -711,7 +712,55 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                         .as_any_value_enum(),
                 );
             }
-            LiteralType::ArrayAccess(_) => todo!(),
+            LiteralType::ArrayAccess(array_access) => {
+                // Translate and get array llvm value (array ptr)
+                self.visit_expression(&array_access.identifier)?;
+                let pointee_ty = self.as_basic_type(self.to_llvm_type(array_access.get_type()));
+
+                // If it's a literal we can't visit the expression because we need
+                // a pointer like type. Visiting the expression would give us the pointee value
+                let ptr_value = match array_access.identifier.as_ref() {
+                    Expression::Literal(Literal {
+                        literal_type: LiteralType::Identifier(name),
+                        ..
+                    }) => *self
+                        .variables
+                        .get(name.as_str())
+                        .expect("Variable does not exist"),
+                    _ => {
+                        self.visit_expression(&array_access.identifier)?;
+                        self.current_value
+                            .as_ref()
+                            .expect("Array access has no value")
+                            .into_pointer_value()
+                    }
+                };
+
+                // Translate and store index expression
+                self.visit_expression(&array_access.index)?;
+                let index_value = self
+                    .current_value
+                    .as_ref()
+                    .expect("Array access index has no value")
+                    .into_int_value();
+
+                // Compute offset with getelementptr
+                let load_ptr_value = unsafe {
+                    self.builder
+                        .build_gep(
+                            pointee_ty,
+                            ptr_value,
+                            &[index_value],
+                            "load_ptr_array_access",
+                        )
+                        .expect("Fail to build gep for array access")
+                };
+
+                // Load it as usual
+                self.builder
+                    .build_load(pointee_ty, load_ptr_value, "array_acess_load")
+                    .expect("Fail to build array access load");
+            }
         }
 
         Ok(())

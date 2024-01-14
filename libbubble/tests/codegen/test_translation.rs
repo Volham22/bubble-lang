@@ -142,6 +142,16 @@ use crate::assets::build_and_link;
     "/tmp/array_init",
     0
 )]
+#[case::array_access(
+    r#"
+    function main(): i32 {
+        let arr: [3; i32] = [1, 2, 3];
+        arr[0];
+        return 0;
+}"#,
+    "/tmp/array_access",
+    0
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,
