@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::ast::{
     self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Call, Expression,
     FunctionStatement, LetStatement, Literal, StructStatement,
@@ -34,6 +36,7 @@ pub enum Type {
         size: u32,
         array_type: Box<Type>,
     },
+    Ptr(Box<Type>),
     Void,
 }
 
@@ -136,6 +139,7 @@ impl From<ast::TypeKind> for Type {
                 size,
                 array_type: Box::new(array_type.kind.into()),
             },
+            ast::TypeKind::Ptr(ptr) => Type::Ptr(Box::new(ptr.deref().to_owned().kind.into())),
         }
     }
 }

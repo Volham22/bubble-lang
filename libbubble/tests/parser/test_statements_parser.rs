@@ -130,6 +130,14 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::ptr_declaration(
+    r#"
+    function f(): i64 {
+        let ptr_var: ptr i32 = 32;
+        return 0;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

@@ -270,6 +270,10 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
                 self.write("[")?;
                 self.visit_type(array_type.as_ref())?;
                 self.write(&format!("; {}]", size))
+            }
+            TypeKind::Ptr(pointee) => {
+                self.write("pointer of ")?;
+                self.visit_type(pointee.as_ref())
             } // void does not exists
         }
     }

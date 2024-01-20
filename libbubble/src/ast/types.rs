@@ -42,6 +42,7 @@ pub enum TypeKind {
     Float,
     Identifier(String),
     Array { size: u32, array_type: Box<Type> },
+    Ptr(Box<Type>),
     Void,
 }
 

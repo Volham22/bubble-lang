@@ -160,7 +160,8 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                     AnyTypeEnum::VectorType(t) => t.array_type(*size).into(),
                     _ => unreachable!("Type couldn't be an array!"),
                 }
-            }
+            },
+            type_system::Type::Ptr(_) => todo!(),
         }
     }
 
