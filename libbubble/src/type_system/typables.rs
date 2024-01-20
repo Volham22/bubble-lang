@@ -186,6 +186,7 @@ impl Typable for Expression {
             Expression::Call(c) => c.get_type(),
             Expression::Assignment(a) => a.get_type(),
             Expression::ArrayInitializer(a) => a.get_type(),
+            Expression::AddrOf(_) => todo!(),
         }
     }
 

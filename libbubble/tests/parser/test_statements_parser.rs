@@ -154,6 +154,34 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::ptr_init_with_addrof(
+    r#"
+    function f(): i64 {
+        let a: i32 = 32;
+        let ptr_var: ptr i32 = addrof a;
+        return 0;
+    }
+"#
+)]
+#[case::addrof_complex_expr(
+    r#"
+    function f(): i64 {
+        let a: i32 = 32;
+        let ptr_var: ptr i32 = addrof (1 + 1 == 2 and 2 * 1 == 2);
+        return 0;
+    }
+"#
+)]
+#[case::addrof_of_addrof(
+    r#"
+    function f(): i64 {
+        let a: i32 = 32;
+        let ptr_var: ptr i32 = addrof a;
+        let ptr_ptr_var = addrof addrof a;
+        return 0;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

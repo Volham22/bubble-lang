@@ -14,11 +14,27 @@ pub enum Expression {
     Call(Call),
     Assignment(Assignment),
     ArrayInitializer(ArrayInitializer),
+    AddrOf(AddrOf),
 }
 
 impl Expression {
     pub fn is_literal(&self) -> bool {
         matches!(self, Expression::Literal(_))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AddrOf {
+    pub expr: Box<Expression>,
+    location: TokenLocation,
+}
+
+impl AddrOf {
+    pub fn new(tk_begin: usize, tk_end: usize, expr: Box<Expression>) -> Self {
+        Self {
+            expr,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
     }
 }
 
@@ -191,5 +207,6 @@ impl_locatable!(
     Literal,
     BinaryOperation,
     ArrayAccess,
-    ArrayInitializer
+    ArrayInitializer,
+    AddrOf
 );

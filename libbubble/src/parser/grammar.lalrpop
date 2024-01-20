@@ -176,8 +176,13 @@ Type: Type = {
 }
 
 Expr: Expression = {
+    AddrOf,
+    <l:@L> <left:AddrOf> "=" <right:AddrOf> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
+}
+
+AddrOf: Expression = {
     ArrayInitialization,
-    <l:@L> <left:ArrayInitialization> "=" <right:ArrayInitialization> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
+    <l:@L> "addrof" <expr:AddrOf> <r:@R> => Expression::AddrOf(AddrOf::new(l, r, Box::new(expr))),
 }
 
 ArrayInitialization: Expression = {

@@ -116,6 +116,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             Expression::Call(c) => self.visit_call(c),
             Expression::Assignment(a) => self.visit_assignment(a),
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
+            Expression::AddrOf(_) => todo!(),
         }
     }
 
@@ -277,6 +278,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             Expression::Call(ref mut c) => self.visit_call(c),
             Expression::Assignment(ref mut a) => self.visit_assignment(a),
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
+            Expression::AddrOf(_) => todo!(),
         }
     }
 
