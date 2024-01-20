@@ -91,6 +91,12 @@ use rstest::rstest;
 )]
 #[case::float_literal("12.3", &[ Token::Real(12.3)])]
 #[case::zero_integer("0", &[ Token::Integer(0)])]
+#[case::ptr_lex("ptr", &[ Token::Ptr ])]
+#[case::ptr_lex("addrof", &[ Token::Addrof ])]
+#[case::complete_ptr_ty("ptr i32", &[ Token::Ptr, Token::I32Ty ])]
+#[case::addrof_var("addrof x", &[ Token::Addrof, Token::Identifier("x".to_string()) ])]
+#[case::ptr_lex("deref", &[ Token::Deref ])]
+#[case::addrof_var("deref x", &[ Token::Deref, Token::Identifier("x".to_string()) ])]
 fn test_code_lexing(#[case] source_code: &str, #[case] expected: &[Token]) {
     let lexer = Token::lexer(source_code);
     let tokens: Vec<Token> = lexer.collect();
