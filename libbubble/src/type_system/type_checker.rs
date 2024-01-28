@@ -3,9 +3,9 @@ use std::ops::Deref;
 use thiserror::Error;
 
 use crate::ast::{
-    AddrOf, ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Definition, Expression,
-    ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
-    LiteralType, Locatable, MutableVisitor, OpType, ReturnStatement, StructStatement,
+    self, AddrOf, ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Definition,
+    Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
+    Literal, LiteralType, Locatable, MutableVisitor, OpType, ReturnStatement, StructStatement,
     TokenLocation, WhileStatement,
 };
 
@@ -63,12 +63,18 @@ pub enum TypeCheckerError {
     NonSubscriptable { ty: Type },
     #[error("Index type is not integer like. Got: {got:?}")]
     IndexNotInteger { got: Type },
+    #[error("Deref a non pointer type: {0:?}.")]
+    DerefNonPointer(Type),
 }
 
 impl PartialEq for TypeCheckerError {
     fn eq(&self, other: &Self) -> bool {
         matches!(
             (self, other),
+            (
+                TypeCheckerError::DerefNonPointer(_),
+                TypeCheckerError::DerefNonPointer(_),
+            ) |
             (
                 TypeCheckerError::BadInit { .. },
                 TypeCheckerError::BadInit { .. }
@@ -595,5 +601,19 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
         )));
 
         Ok(())
+    }
+
+    fn visit_deref(&mut self, expr: &'ast mut ast::Deref) -> Result<(), TypeCheckerError> {
+        self.visit_expression(&mut expr.expr)?;
+
+        match self.current_type.as_ref().expect("Should have a type") {
+            Type::Ptr(pointee) => {
+                self.current_type = Some(pointee.deref().to_owned());
+                Ok(())
+            }
+            _ => Err(TypeCheckerError::DerefNonPointer(
+                self.current_type.clone().unwrap(),
+            )),
+        }
     }
 }

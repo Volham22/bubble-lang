@@ -310,6 +310,21 @@ use crate::assets::run_type_checker;
         return addrof x;
     }"#
 )]
+#[case::deref_ptr(
+    r#"
+    function f(): i32 {
+        let x: ptr i32 = null;
+        deref x;
+        return 0;
+    }"#
+)]
+#[case::deref_ptr_return_value(
+    r#"
+    function f(): i32 {
+        let x: ptr i32 = null;
+        return deref x;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -650,6 +665,15 @@ fn type_checker_valid(#[case] code: &str) {
         got: type_system::Type::Ptr(Box::new(type_system::Type::I32)),
         expected: type_system::Type::I32,
     },
+)]
+#[case::deref_non_ptr(
+    r#"
+    function main(): i32 {
+        let x: i32 = 43;
+        deref x;
+        return 0;
+    }"#,
+    TypeCheckerError::DerefNonPointer(type_system::Type::I32),
 )]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);

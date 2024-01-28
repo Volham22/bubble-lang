@@ -1,6 +1,6 @@
 use super::{
     AddrOf, ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
-    Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
+    Deref, Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
     Literal, ReturnStatement, Statement, StatementKind, Statements, StructStatement, Type,
     TypeKind, WhileStatement,
 };
@@ -117,7 +117,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             Expression::Assignment(a) => self.visit_assignment(a),
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
-            Expression::Deref(_) => todo!(),
+            Expression::Deref(deref) => self.visit_deref(deref),
         }
     }
 
@@ -164,6 +164,10 @@ pub trait Visitor<'ast, E: std::error::Error> {
     }
 
     fn visit_addrof(&mut self, expr: &'ast AddrOf) -> Result<(), E> {
+        self.visit_expression(&expr.expr)
+    }
+
+    fn visit_deref(&mut self, expr: &'ast Deref) -> Result<(), E> {
         self.visit_expression(&expr.expr)
     }
 }
@@ -284,7 +288,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             Expression::Assignment(ref mut a) => self.visit_assignment(a),
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
-            Expression::Deref(_) => todo!(),
+            Expression::Deref(deref) => self.visit_deref(deref),
         }
     }
 
@@ -337,6 +341,10 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
     }
 
     fn visit_addrof(&mut self, expr: &'ast mut AddrOf) -> Result<(), E> {
+        self.visit_expression(&mut expr.expr)
+    }
+
+    fn visit_deref(&mut self, expr: &'ast mut Deref) -> Result<(), E> {
         self.visit_expression(&mut expr.expr)
     }
 }
