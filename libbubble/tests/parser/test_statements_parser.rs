@@ -190,6 +190,23 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::deref_pointer(
+    r#"
+    function f(): i64 {
+        let a: ptr i32 = null;
+        deref a;
+        return deref a;
+    }
+"#
+)]
+#[case::deref_pointer_as_return_type(
+    r#"
+    function f(): i64 {
+        let a: ptr i32 = null;
+        return deref a;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

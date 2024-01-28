@@ -181,8 +181,13 @@ Expr: Expression = {
 }
 
 AddrOf: Expression = {
-    ArrayInitialization,
+    Deref,
     <l:@L> "addrof" <expr:AddrOf> <r:@R> => Expression::AddrOf(AddrOf::new(l, r, Box::new(expr))),
+}
+
+Deref: Expression = {
+    ArrayInitialization,
+    <l:@L> "deref" <expr:AddrOf> <r:@R> => Expression::Deref(Deref::new(l, r, Box::new(expr))),
 }
 
 ArrayInitialization: Expression = {

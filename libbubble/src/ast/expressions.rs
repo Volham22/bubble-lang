@@ -15,6 +15,7 @@ pub enum Expression {
     Assignment(Assignment),
     ArrayInitializer(ArrayInitializer),
     AddrOf(AddrOf),
+    Deref(Deref),
 }
 
 impl Expression {
@@ -39,15 +40,28 @@ impl AddrOf {
 }
 
 #[derive(Debug, Clone)]
+pub struct Deref {
+    pub expr: Box<Expression>,
+    location: TokenLocation,
+}
+
+impl Deref {
+    pub fn new(tk_begin: usize, tk_end: usize, expr: Box<Expression>) -> Self {
+        Self {
+            expr,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Null {
-    pub(crate) ty: Option<type_system::Type>,
     location: TokenLocation,
 }
 
 impl Null {
     pub fn new(tk_begin: usize, tk_end: usize) -> Self {
         Self {
-            ty: None,
             location: TokenLocation::new(tk_begin, tk_end),
         }
     }
