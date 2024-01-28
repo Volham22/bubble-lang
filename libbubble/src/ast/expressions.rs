@@ -57,12 +57,14 @@ impl Deref {
 #[derive(Debug, Clone)]
 pub struct Null {
     location: TokenLocation,
+    pub(crate) ty: Option<type_system::Type>,
 }
 
 impl Null {
     pub fn new(tk_begin: usize, tk_end: usize) -> Self {
         Self {
             location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
         }
     }
 }
@@ -238,6 +240,7 @@ impl_locatable!(
     Assignment,
     BinaryOperation,
     Call,
+    Deref,
     Literal,
     Null
 );

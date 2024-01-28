@@ -74,8 +74,7 @@ impl PartialEq for TypeCheckerError {
             (
                 TypeCheckerError::DerefNonPointer(_),
                 TypeCheckerError::DerefNonPointer(_),
-            ) |
-            (
+            ) | (
                 TypeCheckerError::BadInit { .. },
                 TypeCheckerError::BadInit { .. }
             ) | (
@@ -250,7 +249,6 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     });
                 }
 
-                self.current_type = Some(real_type.clone());
 
                 // If init expression is null we need to give it its real type. The null type will
                 // now hold the concrete type. This is required for the translation pass
@@ -266,6 +264,8 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                             .expect("Should have an init exp (is the parser correct?)"),
                     )
                 }
+
+                self.current_type = Some(real_type.clone());
                 stmt.set_type(real_type);
             }
             None => {
