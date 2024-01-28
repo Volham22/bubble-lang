@@ -39,6 +39,21 @@ impl AddrOf {
 }
 
 #[derive(Debug, Clone)]
+pub struct Null {
+    pub(crate) ty: Option<type_system::Type>,
+    location: TokenLocation,
+}
+
+impl Null {
+    pub fn new(tk_begin: usize, tk_end: usize) -> Self {
+        Self {
+            ty: None,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Assignment {
     pub left: Box<Expression>,
     pub right: Box<Expression>,
@@ -138,6 +153,7 @@ pub enum LiteralType {
     Identifier(String),
     ArrayAccess(ArrayAccess),
     String(String),
+    Null(Null),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -202,11 +218,12 @@ impl ArrayInitializer {
 }
 
 impl_locatable!(
-    Assignment,
-    Call,
-    Literal,
-    BinaryOperation,
+    AddrOf,
     ArrayAccess,
     ArrayInitializer,
-    AddrOf
+    Assignment,
+    BinaryOperation,
+    Call,
+    Literal,
+    Null
 );

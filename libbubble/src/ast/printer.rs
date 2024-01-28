@@ -226,6 +226,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         match &expr.literal_type {
             super::LiteralType::True => self.write("true"),
             super::LiteralType::False => self.write("false"),
+            super::LiteralType::Null(_) => self.write("null"),
             super::LiteralType::Integer(n) => self.write(&n.to_string()),
             super::LiteralType::Float(f) => self.write(&f.to_string()),
             super::LiteralType::Identifier(id) => self.write(id),

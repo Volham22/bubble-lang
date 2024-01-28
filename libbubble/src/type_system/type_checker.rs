@@ -490,6 +490,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     _ => return Err(TypeCheckerError::NonSubscriptable { ty }),
                 }
             }
+            LiteralType::Null(_) => todo!(),
         };
 
         // The identifier type should be the array type. We need to do it

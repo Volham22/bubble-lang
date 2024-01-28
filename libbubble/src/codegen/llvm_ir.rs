@@ -765,6 +765,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                         .into(),
                 );
             }
+            LiteralType::Null(_) => todo!(),
         }
 
         Ok(())
