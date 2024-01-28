@@ -165,6 +165,8 @@ pub enum Token {
     Addrof,
     #[token("deref")]
     Deref,
+    #[token("null")]
+    Null,
 
     // Literals
     #[regex(r"[a-zA-Z][a-zA-Z0-9_]*", |lex| lex.slice().parse())]
