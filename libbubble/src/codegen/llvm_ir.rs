@@ -160,9 +160,18 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                     AnyTypeEnum::VectorType(t) => t.array_type(*size).into(),
                     _ => unreachable!("Type couldn't be an array!"),
                 }
-            },
-            type_system::Type::Ptr(_) => todo!(),
-            type_system::Type::Null { .. } => todo!(),
+            }
+            type_system::Type::Ptr(pointee) => {
+                match self.as_basic_type(self.to_llvm_type(pointee)) {
+                    BasicTypeEnum::ArrayType(t) => t.ptr_type(AddressSpace::from(0u16)).into(),
+                    BasicTypeEnum::FloatType(t) => t.ptr_type(AddressSpace::from(0u16)).into(),
+                    BasicTypeEnum::IntType(t) => t.ptr_type(AddressSpace::from(0u16)).into(),
+                    BasicTypeEnum::PointerType(t) => t.ptr_type(AddressSpace::from(0u16)).into(),
+                    BasicTypeEnum::StructType(t) => t.ptr_type(AddressSpace::from(0u16)).into(),
+                    BasicTypeEnum::VectorType(t) => t.ptr_type(AddressSpace::from(0u16)).into(),
+                }
+            }
+            type_system::Type::Null { concrete_type } => self.to_llvm_type(concrete_type.as_ref().expect("Should have a concrete type")),
         }
     }
 
@@ -766,7 +775,10 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                         .into(),
                 );
             }
-            LiteralType::Null(_) => todo!(),
+            LiteralType::Null(n) => {
+                let llvm_ty = self.to_llvm_type(n.get_type()).into_pointer_type();
+                self.current_value = Some(llvm_ty.const_null().into());
+            }
         }
 
         Ok(())

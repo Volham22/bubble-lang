@@ -172,6 +172,15 @@ use crate::assets::build_and_link;
     "/tmp/expression_as_index",
     0
 )]
+#[case::init_null_ptr(
+    r#"
+    function main(): i32 {
+        let x: ptr i32 = null;
+        return 0;
+}"#,
+    "/tmp/init_null_ptr",
+    0
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,
