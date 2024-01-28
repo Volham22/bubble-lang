@@ -3,7 +3,7 @@ use std::ops::Deref;
 use thiserror::Error;
 
 use crate::ast::{
-    ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Definition, Expression,
+    AddrOf, ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Definition, Expression,
     ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
     LiteralType, Locatable, MutableVisitor, OpType, ReturnStatement, StructStatement,
     TokenLocation, WhileStatement,
@@ -584,6 +584,16 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             size: expr.values.len() as u32,
             array_type: Box::new(first_type),
         });
+        Ok(())
+    }
+
+    fn visit_addrof(&mut self, expr: &'ast mut AddrOf) -> Result<(), TypeCheckerError> {
+        self.visit_expression(&mut expr.expr)?;
+
+        self.current_type = Some(Type::Ptr(Box::new(
+            self.current_type.clone().expect("Should have a type"),
+        )));
+
         Ok(())
     }
 }

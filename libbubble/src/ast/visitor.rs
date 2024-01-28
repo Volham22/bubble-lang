@@ -1,5 +1,5 @@
 use super::{
-    ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
+    AddrOf, ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
     Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
     Literal, ReturnStatement, Statement, StatementKind, Statements, StructStatement, Type,
     TypeKind, WhileStatement,
@@ -116,7 +116,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             Expression::Call(c) => self.visit_call(c),
             Expression::Assignment(a) => self.visit_assignment(a),
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
-            Expression::AddrOf(_) => todo!(),
+            Expression::AddrOf(addrof) => self.visit_addrof(addrof),
         }
     }
 
@@ -160,6 +160,10 @@ pub trait Visitor<'ast, E: std::error::Error> {
         }
 
         Ok(())
+    }
+
+    fn visit_addrof(&mut self, expr: &'ast AddrOf) -> Result<(), E> {
+        self.visit_expression(&expr.expr)
     }
 }
 
@@ -278,7 +282,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             Expression::Call(ref mut c) => self.visit_call(c),
             Expression::Assignment(ref mut a) => self.visit_assignment(a),
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
-            Expression::AddrOf(_) => todo!(),
+            Expression::AddrOf(addrof) => self.visit_addrof(addrof),
         }
     }
 
@@ -328,5 +332,9 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
         }
 
         Ok(())
+    }
+
+    fn visit_addrof(&mut self, expr: &'ast mut AddrOf) -> Result<(), E> {
+        self.visit_expression(&mut expr.expr)
     }
 }
