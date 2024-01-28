@@ -254,6 +254,36 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::pointer_init(
+    r#"
+    function main(): i32 {
+        let arr: ptr i32 = null;
+        return 0;
+    }"#
+)]
+#[case::pass_pointer_to_function(
+    r#"
+    function f(x: ptr i32): i32 {
+        return 42;
+    }
+
+    function main(): i32 {
+        let arr: ptr i32 = null;
+        f(arr);
+        return 0;
+    }"#
+)]
+#[case::function_return_pointer(
+    r#"
+    function f(): ptr i32 {
+        return null;
+    }
+
+    function main(): i32 {
+        f();
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -532,6 +562,29 @@ fn type_checker_valid(#[case] code: &str) {
         left: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::Bool)},
         right: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::U32)},
     }
+)]
+#[case::init_non_pointer_with_null(
+    r#"
+    function main(): i32 {
+        let arr: i32 = null;
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit { left: type_system::Type::I32, right: type_system::Type::Null { concrete_type: None } },
+)]
+#[case::function_return_pointer_wrong_type(
+    r#"
+    function f(): ptr i32 {
+        return false;
+    }
+
+    function main(): i32 {
+        f();
+        return 0;
+    }"#,
+    TypeCheckerError::ReturnTypeMismatch {
+        got: type_system::Type::I32,
+        expected: type_system::Type::Ptr(Box::new(type_system::Type::I32))
+    } ,
 )]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);

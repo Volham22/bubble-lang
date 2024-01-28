@@ -162,6 +162,7 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                 }
             },
             type_system::Type::Ptr(_) => todo!(),
+            type_system::Type::Null { .. } => todo!(),
         }
     }
 

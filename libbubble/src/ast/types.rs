@@ -44,6 +44,7 @@ pub enum TypeKind {
     Array { size: u32, array_type: Box<Type> },
     Ptr(Box<Type>),
     Void,
+    Null { concrete_type: Box<TypeKind> },
 }
 
 impl_locatable!(Type);

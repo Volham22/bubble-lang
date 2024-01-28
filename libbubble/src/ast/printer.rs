@@ -265,6 +265,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
             TypeKind::Float => self.write("float"),
             TypeKind::String => self.write("string"),
             TypeKind::Bool => self.write("bool"),
+            TypeKind::Null { .. } => self.write("Null"),
             TypeKind::Identifier(id) => self.write(id),
             TypeKind::Void => self.write("<void>"),
             TypeKind::Array { size, array_type } => {

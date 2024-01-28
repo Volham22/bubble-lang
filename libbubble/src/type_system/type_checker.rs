@@ -5,8 +5,8 @@ use thiserror::Error;
 use crate::ast::{
     ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Definition, Expression,
     ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
-    LiteralType, MutableVisitor, OpType, ReturnStatement, StructStatement, TokenLocation,
-    WhileStatement,
+    LiteralType, Locatable, MutableVisitor, OpType, ReturnStatement, StructStatement,
+    TokenLocation, WhileStatement,
 };
 
 use super::{
@@ -245,9 +245,30 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 }
 
                 self.current_type = Some(real_type.clone());
+
+                // If init expression is null we need to give it its real type. The null type will
+                // now hold the concrete type. This is required for the translation pass
+                if let Type::Null { .. } = self.current_type.as_ref().expect("Should have a type") {
+                    let set_ty = Type::Null {
+                        concrete_type: Some(Box::new(real_type.clone())),
+                    };
+                    let mut setter = ExpressionTypeSetter::new(&set_ty);
+
+                    setter.set_type_recusively(
+                        stmt.init_exp
+                            .as_mut()
+                            .expect("Should have an init exp (is the parser correct?)"),
+                    )
+                }
                 stmt.set_type(real_type);
             }
             None => {
+                if let Type::Null { .. } = self.current_type.as_ref().expect("Should have a type") {
+                    return Err(TypeCheckerError::InferenceError(
+                        stmt.get_location().clone(),
+                    ));
+                }
+
                 stmt.set_type(self.current_type.as_ref().unwrap().clone());
             }
         }
@@ -490,7 +511,14 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     _ => return Err(TypeCheckerError::NonSubscriptable { ty }),
                 }
             }
-            LiteralType::Null(_) => todo!(),
+            LiteralType::Null(_) => {
+                self.current_type = Some(Type::Null {
+                    concrete_type: None,
+                });
+
+                // No need to go further.
+                return Ok(());
+            }
         };
 
         // The identifier type should be the array type. We need to do it

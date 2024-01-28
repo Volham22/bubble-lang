@@ -38,6 +38,9 @@ pub enum Type {
     },
     Ptr(Box<Type>),
     Void,
+    Null {
+        concrete_type: Option<Box<Type>>,
+    },
 }
 
 impl Type {
@@ -71,6 +74,7 @@ impl Type {
             | (Type::I64, Type::I64)
             | (Type::Bool, Type::Bool)
             | (Type::Void, Type::Void)
+            | (Type::Ptr(_), Type::Null { .. })
             | (Type::String, Type::String) => true,
             (
                 Type::Array {
@@ -82,6 +86,7 @@ impl Type {
                     array_type: rarray_rtype,
                 },
             ) => lsize == rsize && larray_type.is_compatible_with(rarray_rtype),
+            (Type::Ptr(l), Type::Ptr(r)) => l.is_compatible_with(r),
             _ => false,
         }
     }
@@ -140,6 +145,9 @@ impl From<ast::TypeKind> for Type {
                 array_type: Box::new(array_type.kind.into()),
             },
             ast::TypeKind::Ptr(ptr) => Type::Ptr(Box::new(ptr.deref().to_owned().kind.into())),
+            ast::TypeKind::Null { .. } => Type::Null {
+                concrete_type: None,
+            },
         }
     }
 }
