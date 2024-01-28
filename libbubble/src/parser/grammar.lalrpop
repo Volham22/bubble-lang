@@ -252,6 +252,7 @@ Group: Expression = {
 Primary: Literal = {
     <l:@L> "true"       <r:@R> => Literal::new(l, r, LiteralType::True),
     <l:@L> "false"      <r:@R> => Literal::new(l, r, LiteralType::False),
+    <l:@L> "null"       <r:@R> => Literal::new(l, r, LiteralType::Null(Null::new(l, r))),
     <l:@L> <val:"int">        <r:@R> => Literal::new(l, r, LiteralType::Integer(val)),
     <l:@L> <val:"float">      <r:@R> => Literal::new(l, r, LiteralType::Float(val)),
     <l:@L> <val:"identifier"> <r:@R> => Literal::new(l, r, LiteralType::Identifier(val)),
@@ -318,5 +319,6 @@ extern {
         "ptr" => Token::Ptr,
         "addrof" => Token::Addrof,
         "deref" => Token::Deref,
+        "null" => Token::Null,
     }
 }

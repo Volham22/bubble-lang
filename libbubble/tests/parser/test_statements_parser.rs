@@ -182,6 +182,14 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::init_pointer_as_null(
+    r#"
+    function f(): i64 {
+        let a: ptr i32 = null;
+        return 0;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(
