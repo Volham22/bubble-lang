@@ -13,9 +13,9 @@ use std::{collections::HashMap, convert::Infallible};
 
 use crate::{
     ast::{
-        ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, Expression,
-        ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
-        LiteralType, OpType, ReturnStatement, StructStatement, Visitor, WhileStatement,
+        self, AddrOf, ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call,
+        Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
+        Literal, LiteralType, OpType, ReturnStatement, StructStatement, Visitor, WhileStatement,
     },
     codegen::locals_collector::SymbolsMap,
     type_system::{self, Typable, Type},
@@ -47,6 +47,7 @@ pub struct Translator<'ctx, 'ast, 'module> {
     variables: HashMap<&'ast str, PointerValue<'ctx>>,
     current_fn_value: Option<FunctionValue<'ctx>>,
     current_value: Option<AnyValueEnum<'ctx>>,
+    should_load: bool,
 }
 
 impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
@@ -64,6 +65,7 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
             variables: HashMap::new(),
             current_fn_value: None,
             current_value: None,
+            should_load: true,
         }
     }
 
@@ -171,7 +173,9 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                     BasicTypeEnum::VectorType(t) => t.ptr_type(AddressSpace::from(0u16)).into(),
                 }
             }
-            type_system::Type::Null { concrete_type } => self.to_llvm_type(concrete_type.as_ref().expect("Should have a concrete type")),
+            type_system::Type::Null { concrete_type } => {
+                self.to_llvm_type(concrete_type.as_ref().expect("Should have a concrete type"))
+            }
         }
     }
 
@@ -704,7 +708,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                     .expect("variable not found!");
 
                 println!("Statement: {:?}", stmt);
-                self.current_value = Some(
+                self.current_value = Some(if self.should_load {
                     self.builder
                         .build_load(
                             self.as_basic_type(self.to_llvm_type(stmt.get_type())),
@@ -712,8 +716,10 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                             "load",
                         )
                         .expect("Fail to build load")
-                        .as_any_value_enum(),
-                );
+                        .as_any_value_enum()
+                } else {
+                    AnyValueEnum::PointerValue(*ptr)
+                });
             }
             LiteralType::String(content) => {
                 self.current_value = Some(
@@ -826,6 +832,34 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         self.builder
             .build_store(*lhs, self.as_basic_value(rhs))
             .expect("Fail to build store");
+
+        Ok(())
+    }
+
+    fn visit_addrof(&mut self, expr: &'ast AddrOf) -> Result<(), Infallible> {
+        // Here is the hack: addrof just means that we want the pointer so
+        // we don't want to load the value from inside the llvm value
+        self.should_load = false;
+        self.visit_expression(&expr.expr)?;
+        self.should_load = true;
+
+        Ok(())
+    }
+
+    fn visit_deref(&mut self, expr: &'ast ast::Deref) -> Result<(), Infallible> {
+        self.visit_expression(&expr.expr)?;
+        let ptr_value = self.current_value.as_ref().expect("Should have a value");
+
+        self.current_value = Some(
+            self.builder
+                .build_load(
+                    self.as_basic_type(ptr_value.get_type()),
+                    ptr_value.into_pointer_value(),
+                    "deref_ptr",
+                )
+                .expect("build deref load failed")
+                .into(),
+        );
 
         Ok(())
     }

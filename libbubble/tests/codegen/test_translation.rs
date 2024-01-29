@@ -296,6 +296,33 @@ fn test_translation(
     0,
     "123"
 )]
+#[case::deref_value(
+    r#"
+    extern function printf(msg: string, value: i32): i32;
+    function main(): i32 {
+        let x: i32 = 42;
+        let x_ptr: ptr i32 = addrof x;
+        printf("%d", deref x_ptr);
+        return 0;
+    }"#,
+    "/tmp/deref_value",
+    0,
+    "42"
+)]
+#[case::deref_pointer_of_pointer_value(
+    r#"
+    extern function printf(msg: string, value: i32): i32;
+    function main(): i32 {
+        let x: i32 = 42;
+        let x_ptr: ptr i32 = addrof x;
+        let x_ptr_ptr: ptr ptr i32 = addrof x_ptr;
+        printf("%d", deref (deref x_ptr_ptr));
+        return 0;
+    }"#,
+    "/tmp/deref_pointer_of_pointer_value",
+    0,
+    "42"
+)]
 fn test_translation_with_stdout(
     #[case] code: &str,
     #[case] executable_path: &str,
