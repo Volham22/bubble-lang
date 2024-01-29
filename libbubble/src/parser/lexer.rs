@@ -158,6 +158,16 @@ pub enum Token {
     #[token("void")]
     VoidTy,
 
+    // Pointer stuff
+    #[token("ptr")]
+    Ptr,
+    #[token("addrof")]
+    Addrof,
+    #[token("deref")]
+    Deref,
+    #[token("null")]
+    Null,
+
     // Literals
     #[regex(r"[a-zA-Z][a-zA-Z0-9_]*", |lex| lex.slice().parse())]
     Identifier(String),

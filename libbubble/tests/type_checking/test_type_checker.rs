@@ -254,6 +254,77 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::pointer_init(
+    r#"
+    function main(): i32 {
+        let arr: ptr i32 = null;
+        return 0;
+    }"#
+)]
+#[case::pass_pointer_to_function(
+    r#"
+    function f(x: ptr i32): i32 {
+        return 42;
+    }
+
+    function main(): i32 {
+        let arr: ptr i32 = null;
+        f(arr);
+        return 0;
+    }"#
+)]
+#[case::function_return_pointer(
+    r#"
+    function f(): ptr i32 {
+        return null;
+    }
+
+    function main(): i32 {
+        f();
+        return 0;
+    }"#
+)]
+#[case::pointer_init_with_addrof(
+    r#"
+    function main(): i32 {
+        let x: i32 = 42;
+        let ptr_x: ptr i32 = addrof x;
+        return 0;
+    }"#
+)]
+#[case::addrof_as_function_return( // unsafe sample. For type checker purpose only
+    r#"
+    function f(): ptr i32 {
+        let x: i32 = 42;
+        return addrof x;
+    }"#
+)]
+#[case::addrof_as_function_parameter( // unsafe sample. For type checker purpose only
+    r#"
+    function g(x: ptr i32): i32 {
+        return 42;
+    }
+    function f(): ptr i32 {
+        let x: i32 = 42;
+        g(addrof x);
+        return addrof x;
+    }"#
+)]
+#[case::deref_ptr(
+    r#"
+    function f(): i32 {
+        let x: ptr i32 = null;
+        deref x;
+        return 0;
+    }"#
+)]
+#[case::deref_ptr_return_value(
+    r#"
+    function f(): i32 {
+        let x: ptr i32 = null;
+        return deref x;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -532,6 +603,77 @@ fn type_checker_valid(#[case] code: &str) {
         left: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::Bool)},
         right: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::U32)},
     }
+)]
+#[case::init_non_pointer_with_null(
+    r#"
+    function main(): i32 {
+        let arr: i32 = null;
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit { left: type_system::Type::I32, right: type_system::Type::Null { concrete_type: None } },
+)]
+#[case::function_return_pointer_wrong_type(
+    r#"
+    function f(): ptr i32 {
+        return false;
+    }
+
+    function main(): i32 {
+        f();
+        return 0;
+    }"#,
+    TypeCheckerError::ReturnTypeMismatch {
+        got: type_system::Type::I32,
+        expected: type_system::Type::Ptr(Box::new(type_system::Type::I32))
+    } ,
+)]
+#[case::bad_addrof_var_init(
+    r#"
+    function main(): i32 {
+        let x: i32 = 42;
+        let ptr_x: i32 = addrof x;
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit {
+        left: type_system::Type::I32,
+        right: type_system::Type::Ptr(Box::new(type_system::Type::I32))
+    } ,
+)]
+#[case::bad_addrof_parameter(
+    r#"
+    function g(x: ptr bool): i32 {
+        return 42;
+    }
+    function main(): i32 {
+        let x: i32 = 42;
+        g(addrof x);
+        return 0;
+    }"#,
+    TypeCheckerError::BadParameter {
+        name: "x".to_string(),
+        expected_type: type_system::Type::Ptr(Box::new(type_system::Type::Bool)),
+        got: type_system::Type::Ptr(Box::new(type_system::Type::I32)),
+    },
+)]
+#[case::bad_addrof_return_type(
+    r#"
+    function main(): i32 {
+        let x: i32 = 43;
+        return addrof x;
+    }"#,
+    TypeCheckerError::ReturnTypeMismatch {
+        got: type_system::Type::Ptr(Box::new(type_system::Type::I32)),
+        expected: type_system::Type::I32,
+    },
+)]
+#[case::deref_non_ptr(
+    r#"
+    function main(): i32 {
+        let x: i32 = 43;
+        deref x;
+        return 0;
+    }"#,
+    TypeCheckerError::DerefNonPointer(type_system::Type::I32)
 )]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);

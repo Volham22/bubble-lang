@@ -45,6 +45,8 @@ use rstest::rstest;
 #[case::array_access("array[1]")]
 #[case::array_access_with_sub_expr("array[1 + 1]")]
 #[case::array_access_with_call("array[f(12)]")]
+#[case::null_expr("null")]
+#[case::deref("deref x")]
 fn test_valid_expression(#[case] code: &str) {
     let parser_result = parse_statements_input(code);
     assert!(

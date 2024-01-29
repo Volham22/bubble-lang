@@ -33,6 +33,14 @@ impl<'ast, 'ty> MutableVisitor<'ast, Infallible> for ExpressionTypeSetter<'ty> {
     }
 
     fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), Infallible> {
+        match &mut expr.literal_type {
+            LiteralType::ArrayAccess(aa) => {
+                aa.set_type(self.new_type.clone());
+            }
+            LiteralType::Null(n) => n.set_type(self.new_type.clone()),
+            _ => (),
+        }
+
         expr.set_type(self.new_type.clone());
         Ok(())
     }

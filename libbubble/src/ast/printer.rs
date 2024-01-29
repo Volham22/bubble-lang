@@ -226,6 +226,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         match &expr.literal_type {
             super::LiteralType::True => self.write("true"),
             super::LiteralType::False => self.write("false"),
+            super::LiteralType::Null(_) => self.write("null"),
             super::LiteralType::Integer(n) => self.write(&n.to_string()),
             super::LiteralType::Float(f) => self.write(&f.to_string()),
             super::LiteralType::Identifier(id) => self.write(id),
@@ -264,12 +265,17 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
             TypeKind::Float => self.write("float"),
             TypeKind::String => self.write("string"),
             TypeKind::Bool => self.write("bool"),
+            TypeKind::Null { .. } => self.write("Null"),
             TypeKind::Identifier(id) => self.write(id),
             TypeKind::Void => self.write("<void>"),
             TypeKind::Array { size, array_type } => {
                 self.write("[")?;
                 self.visit_type(array_type.as_ref())?;
                 self.write(&format!("; {}]", size))
+            }
+            TypeKind::Ptr(pointee) => {
+                self.write("pointer of ")?;
+                self.visit_type(pointee.as_ref())
             } // void does not exists
         }
     }

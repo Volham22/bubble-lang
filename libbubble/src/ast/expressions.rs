@@ -14,11 +14,58 @@ pub enum Expression {
     Call(Call),
     Assignment(Assignment),
     ArrayInitializer(ArrayInitializer),
+    AddrOf(AddrOf),
+    Deref(Deref),
 }
 
 impl Expression {
     pub fn is_literal(&self) -> bool {
         matches!(self, Expression::Literal(_))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AddrOf {
+    pub expr: Box<Expression>,
+    location: TokenLocation,
+}
+
+impl AddrOf {
+    pub fn new(tk_begin: usize, tk_end: usize, expr: Box<Expression>) -> Self {
+        Self {
+            expr,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Deref {
+    pub expr: Box<Expression>,
+    location: TokenLocation,
+}
+
+impl Deref {
+    pub fn new(tk_begin: usize, tk_end: usize, expr: Box<Expression>) -> Self {
+        Self {
+            expr,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Null {
+    location: TokenLocation,
+    pub(crate) ty: Option<type_system::Type>,
+}
+
+impl Null {
+    pub fn new(tk_begin: usize, tk_end: usize) -> Self {
+        Self {
+            location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
+        }
     }
 }
 
@@ -122,6 +169,7 @@ pub enum LiteralType {
     Identifier(String),
     ArrayAccess(ArrayAccess),
     String(String),
+    Null(Null),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -186,10 +234,13 @@ impl ArrayInitializer {
 }
 
 impl_locatable!(
-    Assignment,
-    Call,
-    Literal,
-    BinaryOperation,
+    AddrOf,
     ArrayAccess,
-    ArrayInitializer
+    ArrayInitializer,
+    Assignment,
+    BinaryOperation,
+    Call,
+    Deref,
+    Literal,
+    Null
 );

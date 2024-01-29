@@ -1,6 +1,8 @@
+use std::ops::Deref;
+
 use crate::ast::{
     self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Call, Expression,
-    FunctionStatement, LetStatement, Literal, StructStatement,
+    FunctionStatement, LetStatement, Literal, Null, StructStatement,
 };
 
 pub type FunctionParameter = (Type, String);
@@ -34,7 +36,11 @@ pub enum Type {
         size: u32,
         array_type: Box<Type>,
     },
+    Ptr(Box<Type>),
     Void,
+    Null {
+        concrete_type: Option<Box<Type>>,
+    },
 }
 
 impl Type {
@@ -68,6 +74,7 @@ impl Type {
             | (Type::I64, Type::I64)
             | (Type::Bool, Type::Bool)
             | (Type::Void, Type::Void)
+            | (Type::Ptr(_), Type::Null { .. })
             | (Type::String, Type::String) => true,
             (
                 Type::Array {
@@ -79,6 +86,7 @@ impl Type {
                     array_type: rarray_rtype,
                 },
             ) => lsize == rsize && larray_type.is_compatible_with(rarray_rtype),
+            (Type::Ptr(l), Type::Ptr(r)) => l.is_compatible_with(r),
             _ => false,
         }
     }
@@ -136,6 +144,10 @@ impl From<ast::TypeKind> for Type {
                 size,
                 array_type: Box::new(array_type.kind.into()),
             },
+            ast::TypeKind::Ptr(ptr) => Type::Ptr(Box::new(ptr.deref().to_owned().kind.into())),
+            ast::TypeKind::Null { .. } => Type::Null {
+                concrete_type: None,
+            },
         }
     }
 }
@@ -169,6 +181,7 @@ impl_typables!(
     LetStatement,
     Literal,
     ArrayAccess,
+    Null,
     ArrayInitializer,
     StructStatement
 );
@@ -182,6 +195,8 @@ impl Typable for Expression {
             Expression::Call(c) => c.get_type(),
             Expression::Assignment(a) => a.get_type(),
             Expression::ArrayInitializer(a) => a.get_type(),
+            Expression::AddrOf(_) => todo!(),
+            Expression::Deref(_) => todo!(),
         }
     }
 

@@ -130,6 +130,83 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::ptr_declaration(
+    r#"
+    function f(): i64 {
+        let ptr_var: ptr i32 = 32;
+        return 0;
+    }
+"#
+)]
+#[case::ptr_of_ptr_declaration(
+    r#"
+    function f(): i64 {
+        let ptr_var: ptr ptr i32 = 32;
+        return 0;
+    }
+"#
+)]
+#[case::ptr_of_ptr_of_ptr_declaration(
+    r#"
+    function f(): i64 {
+        let ptr_var: ptr ptr ptr i32 = 32;
+        return 0;
+    }
+"#
+)]
+#[case::ptr_init_with_addrof(
+    r#"
+    function f(): i64 {
+        let a: i32 = 32;
+        let ptr_var: ptr i32 = addrof a;
+        return 0;
+    }
+"#
+)]
+#[case::addrof_complex_expr(
+    r#"
+    function f(): i64 {
+        let a: i32 = 32;
+        let ptr_var: ptr i32 = addrof (1 + 1 == 2 and 2 * 1 == 2);
+        return 0;
+    }
+"#
+)]
+#[case::addrof_of_addrof(
+    r#"
+    function f(): i64 {
+        let a: i32 = 32;
+        let ptr_var: ptr i32 = addrof a;
+        let ptr_ptr_var = addrof addrof a;
+        return 0;
+    }
+"#
+)]
+#[case::init_pointer_as_null(
+    r#"
+    function f(): i64 {
+        let a: ptr i32 = null;
+        return 0;
+    }
+"#
+)]
+#[case::deref_pointer(
+    r#"
+    function f(): i64 {
+        let a: ptr i32 = null;
+        deref a;
+        return deref a;
+    }
+"#
+)]
+#[case::deref_pointer_as_return_type(
+    r#"
+    function f(): i64 {
+        let a: ptr i32 = null;
+        return deref a;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

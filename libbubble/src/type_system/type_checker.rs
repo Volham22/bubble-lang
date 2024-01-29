@@ -3,10 +3,10 @@ use std::ops::Deref;
 use thiserror::Error;
 
 use crate::ast::{
-    ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Definition, Expression,
-    ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
-    LiteralType, MutableVisitor, OpType, ReturnStatement, StructStatement, TokenLocation,
-    WhileStatement,
+    self, AddrOf, ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Definition,
+    Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
+    Literal, LiteralType, Locatable, MutableVisitor, OpType, ReturnStatement, StructStatement,
+    TokenLocation, WhileStatement,
 };
 
 use super::{
@@ -63,6 +63,8 @@ pub enum TypeCheckerError {
     NonSubscriptable { ty: Type },
     #[error("Index type is not integer like. Got: {got:?}")]
     IndexNotInteger { got: Type },
+    #[error("Deref a non pointer type: {0:?}.")]
+    DerefNonPointer(Type),
 }
 
 impl PartialEq for TypeCheckerError {
@@ -70,6 +72,9 @@ impl PartialEq for TypeCheckerError {
         matches!(
             (self, other),
             (
+                TypeCheckerError::DerefNonPointer(_),
+                TypeCheckerError::DerefNonPointer(_),
+            ) | (
                 TypeCheckerError::BadInit { .. },
                 TypeCheckerError::BadInit { .. }
             ) | (
@@ -244,10 +249,31 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     });
                 }
 
+                // If init expression is null we need to give it its real type. The null type will
+                // now hold the concrete type. This is required for the translation pass
+                if let Type::Null { .. } = self.current_type.as_ref().expect("Should have a type") {
+                    let set_ty = Type::Null {
+                        concrete_type: Some(Box::new(real_type.clone())),
+                    };
+                    let mut setter = ExpressionTypeSetter::new(&set_ty);
+
+                    setter.set_type_recusively(
+                        stmt.init_exp
+                            .as_mut()
+                            .expect("Should have an init exp (is the parser correct?)"),
+                    )
+                }
+
                 self.current_type = Some(real_type.clone());
                 stmt.set_type(real_type);
             }
             None => {
+                if let Type::Null { .. } = self.current_type.as_ref().expect("Should have a type") {
+                    return Err(TypeCheckerError::InferenceError(
+                        stmt.get_location().clone(),
+                    ));
+                }
+
                 stmt.set_type(self.current_type.as_ref().unwrap().clone());
             }
         }
@@ -490,6 +516,14 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     _ => return Err(TypeCheckerError::NonSubscriptable { ty }),
                 }
             }
+            LiteralType::Null(_) => {
+                self.current_type = Some(Type::Null {
+                    concrete_type: None,
+                });
+
+                // No need to go further.
+                return Ok(());
+            }
         };
 
         // The identifier type should be the array type. We need to do it
@@ -556,5 +590,29 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             array_type: Box::new(first_type),
         });
         Ok(())
+    }
+
+    fn visit_addrof(&mut self, expr: &'ast mut AddrOf) -> Result<(), TypeCheckerError> {
+        self.visit_expression(&mut expr.expr)?;
+
+        self.current_type = Some(Type::Ptr(Box::new(
+            self.current_type.clone().expect("Should have a type"),
+        )));
+
+        Ok(())
+    }
+
+    fn visit_deref(&mut self, expr: &'ast mut ast::Deref) -> Result<(), TypeCheckerError> {
+        self.visit_expression(&mut expr.expr)?;
+
+        match self.current_type.as_ref().expect("Should have a type") {
+            Type::Ptr(pointee) => {
+                self.current_type = Some(pointee.deref().to_owned());
+                Ok(())
+            }
+            _ => Err(TypeCheckerError::DerefNonPointer(
+                self.current_type.clone().unwrap(),
+            )),
+        }
     }
 }
