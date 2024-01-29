@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use crate::ast::{
     Bindable, BreakStatement, Call, ContinueStatement, Definition, Expression, ForStatement,
     FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType, Locatable,
-    MutableVisitor, ReturnStatement, StructStatement, Type, TypeKind,
-    WhileStatement,
+    MutableVisitor, ReturnStatement, StructStatement, Type, TypeKind, WhileStatement,
 };
 
 use super::{errors::BinderError, utils::ScopedMap};

@@ -8,8 +8,7 @@ use crate::ast::{
 };
 
 use super::{
-    errors::TypeCheckerError,
-    inference::{ExpressionTypeSetter, IntegerInference},
+    errors::TypeCheckerError, inference::IntegerInference, type_setter::ExpressionTypeSetter,
     Typable, Type,
 };
 
