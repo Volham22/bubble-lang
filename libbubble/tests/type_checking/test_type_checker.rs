@@ -673,7 +673,7 @@ fn type_checker_valid(#[case] code: &str) {
         deref x;
         return 0;
     }"#,
-    TypeCheckerError::DerefNonPointer(type_system::Type::I32),
+    TypeCheckerError::DerefNonPointer(type_system::Type::I32)
 )]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);

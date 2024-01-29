@@ -1,7 +1,8 @@
 use std::ops::Deref;
 
 use crate::ast::{
-    self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Call, Expression, FunctionStatement, LetStatement, Literal, Null, StructStatement
+    self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Call, Expression,
+    FunctionStatement, LetStatement, Literal, Null, StructStatement,
 };
 
 pub type FunctionParameter = (Type, String);

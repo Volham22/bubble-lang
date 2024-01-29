@@ -249,7 +249,6 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     });
                 }
 
-
                 // If init expression is null we need to give it its real type. The null type will
                 // now hold the concrete type. This is required for the translation pass
                 if let Type::Null { .. } = self.current_type.as_ref().expect("Should have a type") {
