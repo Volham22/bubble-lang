@@ -2,7 +2,7 @@ use std::convert::Infallible;
 
 use crate::ast::*;
 
-use super::{type_checker::TypeCheckerError, Typable, Type};
+use super::{errors::TypeCheckerError, Typable, Type};
 
 pub(crate) struct ExpressionTypeSetter<'ty> {
     new_type: &'ty Type,
