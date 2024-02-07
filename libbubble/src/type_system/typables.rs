@@ -88,6 +88,7 @@ impl Type {
             ) => lsize == rsize && larray_type.is_compatible_with(rarray_rtype),
             // Void pointer is compatible with any pointer type
             (Type::Ptr(l), Type::Ptr(_)) if l.as_ref() == &Type::Void => true,
+            (Type::Ptr(_), Type::Ptr(r)) if r.as_ref() == &Type::Void => true,
             (Type::Ptr(l), Type::Ptr(r)) => l.is_compatible_with(r),
             _ => false,
         }

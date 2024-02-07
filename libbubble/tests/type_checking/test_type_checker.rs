@@ -340,6 +340,14 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::implicit_cast_from_void_ptr(
+    r#"
+    function f(): i32 {
+        let ptr_var: ptr void = null;
+        let int_ptr: ptr i32 = ptr_var;
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
