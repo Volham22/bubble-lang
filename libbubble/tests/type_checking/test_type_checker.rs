@@ -325,6 +325,64 @@ use crate::assets::run_type_checker;
         return deref x;
     }"#
 )]
+#[case::assign_void_ptr_to_null(
+    r#"
+    function f(): i32 {
+        let x: ptr void = null;
+        return 0;
+    }"#
+)]
+#[case::implicit_cast_to_void_ptr(
+    r#"
+    function f(): i32 {
+        let x: i32 = 42;
+        let ptr_var: ptr void = addrof x;
+        return 0;
+    }"#
+)]
+#[case::implicit_cast_from_void_ptr(
+    r#"
+    function f(): i32 {
+        let ptr_var: ptr void = null;
+        let int_ptr: ptr i32 = ptr_var;
+        return 0;
+    }"#
+)]
+#[case::implicit_cast_void_ptr_parameter(
+    r#"
+    extern function g(p: ptr void): void;
+    function f(): i32 {
+        let int_ptr: ptr i32 = null;
+        g(int_ptr);
+        return 0;
+    }"#
+)]
+#[case::implicit_cast_void_ptr_return_type(
+    r#"
+    extern function g(): ptr void;
+    function f(): i32 {
+        let int_ptr: ptr i32 = g();
+        return 0;
+    }"#
+)]
+#[case::assign_void_ptr_return_type(
+    r#"
+    extern function g(): ptr void;
+    function f(): i32 {
+        let int_ptr: ptr void = g();
+        return 0;
+    }"#
+)]
+#[case::deref_expression_as_lvalue(
+    r#"
+    extern function g(): ptr void;
+    function f(): i32 {
+        let x: i32 = 42;
+        let int_ptr: ptr i32 = addrof x;
+        deref int_ptr = 51;
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(

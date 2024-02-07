@@ -86,6 +86,9 @@ impl Type {
                     array_type: rarray_rtype,
                 },
             ) => lsize == rsize && larray_type.is_compatible_with(rarray_rtype),
+            // Void pointer is compatible with any pointer type
+            (Type::Ptr(l), Type::Ptr(_)) if l.as_ref() == &Type::Void => true,
+            (Type::Ptr(_), Type::Ptr(r)) if r.as_ref() == &Type::Void => true,
             (Type::Ptr(l), Type::Ptr(r)) => l.is_compatible_with(r),
             _ => false,
         }
@@ -202,5 +205,18 @@ impl Typable for Expression {
 
     fn set_type(&mut self, _: Type) {
         unreachable!("Cannot set type to an expression directly");
+    }
+}
+
+impl Typable for ast::Deref {
+    fn get_type(&self) -> &Type {
+        match self.expr.get_type() {
+            Type::Ptr(pointee) => pointee,
+            _ => panic!("A deref expression type must be a pointer"),
+        }
+    }
+
+    fn set_type(&mut self, _: Type) {
+        unreachable!("Can't set type to a deref expression");
     }
 }

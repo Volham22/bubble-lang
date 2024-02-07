@@ -104,7 +104,7 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
             AnyTypeEnum::PointerType(x) => x.as_basic_type_enum(),
             AnyTypeEnum::StructType(x) => x.as_basic_type_enum(),
             AnyTypeEnum::VectorType(x) => x.as_basic_type_enum(),
-            _ => panic!("Non basic type!"),
+            _ => panic!("Non basic type! {:?}", ty),
         }
     }
 
@@ -162,6 +162,11 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                     _ => unreachable!("Type couldn't be an array!"),
                 }
             }
+            type_system::Type::Ptr(pointee) if pointee.as_ref() == &Type::Void => self
+                .context
+                .i64_type()
+                .ptr_type(AddressSpace::default())
+                .into(),
             type_system::Type::Ptr(pointee) => {
                 match self.as_basic_type(self.to_llvm_type(pointee)) {
                     BasicTypeEnum::ArrayType(t) => t.ptr_type(AddressSpace::from(0u16)).into(),
@@ -691,7 +696,6 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                     .get(id.as_str())
                     .expect("variable not found!");
 
-                println!("Statement: {:?}", stmt);
                 self.current_value = Some(if self.should_load {
                     self.builder
                         .build_load(
@@ -802,16 +806,23 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         let rhs = self.current_value.unwrap();
 
         // TODO: Add an `as_lvalue` method for `Literal` to make it cleaner
-        let lhs = self
-            .variables
-            .get(match expr.left.as_ref() {
-                Expression::Literal(l) => match &l.literal_type {
+        let lhs = match expr.left.as_ref() {
+            Expression::Literal(l) => self
+                .variables
+                .get(match &l.literal_type {
                     LiteralType::Identifier(id) => id.as_str(),
                     _ => unreachable!(),
-                },
-                _ => unreachable!(),
-            })
-            .unwrap();
+                })
+                .expect("Undeclared variable!"),
+            Expression::Deref(deref) => {
+                self.visit_expression(&deref.expr)?;
+                match self.current_value.as_ref().expect("Deref has no value") {
+                    AnyValueEnum::PointerValue(v) => v,
+                    _ => panic!("Deref has a non pointer type"),
+                }
+            }
+            _ => unreachable!(),
+        };
 
         self.builder
             .build_store(*lhs, self.as_basic_value(rhs))

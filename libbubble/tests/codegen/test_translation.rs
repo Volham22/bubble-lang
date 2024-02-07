@@ -181,6 +181,30 @@ use crate::assets::build_and_link;
     "/tmp/init_null_ptr",
     0
 )]
+#[case::malloc_single_int(
+    r#"
+    extern function malloc(size: u64): ptr void;
+    function main(): i32 {
+        let x: ptr i32 = malloc(4);
+        deref x;
+        return 0;
+}"#,
+    "/tmp/malloc_single_int",
+    0
+)]
+#[case::malloc_and_free_single_int(
+    r#"
+    extern function malloc(size: u64): ptr void;
+    extern function free(val: ptr void): void;
+    function main(): i32 {
+        let x: ptr i32 = malloc(4);
+        deref x;
+        free(x);
+        return 0;
+}"#,
+    "/tmp/malloc_and_free_single_int",
+    0
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,
@@ -322,6 +346,20 @@ fn test_translation(
     "/tmp/deref_pointer_of_pointer_value",
     0,
     "42"
+)]
+#[case::deref_expression_as_lvalue_and_init(
+    r#"
+    extern function printf(msg: string, value: i32): i32;
+    function main(): i32 {
+        let x: i32 = 42;
+        let int_ptr: ptr i32 = addrof x;
+        deref int_ptr = 51;
+        printf("%d", x);
+        return 0;
+    }"#,
+    "/tmp/deref_expression_as_lvalue",
+    0,
+    "51"
 )]
 fn test_translation_with_stdout(
     #[case] code: &str,

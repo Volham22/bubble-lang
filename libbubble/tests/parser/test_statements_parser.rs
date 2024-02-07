@@ -207,6 +207,14 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::void_pointer_declare(
+    r#"
+    function f(): i32 {
+        let a: ptr void = null;
+        return 0;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(
