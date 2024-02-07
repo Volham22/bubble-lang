@@ -357,7 +357,7 @@ fn test_translation(
         printf("%d", x);
         return 0;
     }"#,
-    "/tmp/deref_expression_as_lvalue",
+    "/tmp/deref_expression_as_lvalue_and_init",
     0,
     "51"
 )]
