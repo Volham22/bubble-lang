@@ -348,6 +348,31 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::implicit_cast_void_ptr_parameter(
+    r#"
+    extern function g(p: ptr void): void;
+    function f(): i32 {
+        let int_ptr: ptr i32 = null;
+        g(int_ptr);
+        return 0;
+    }"#
+)]
+#[case::implicit_cast_void_ptr_return_type(
+    r#"
+    extern function g(): ptr void;
+    function f(): i32 {
+        let int_ptr: ptr i32 = g();
+        return 0;
+    }"#
+)]
+#[case::assign_void_ptr_return_type(
+    r#"
+    extern function g(): ptr void;
+    function f(): i32 {
+        let int_ptr: ptr void = g();
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(

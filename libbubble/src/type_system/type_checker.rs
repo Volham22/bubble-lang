@@ -284,6 +284,8 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 }
             }
 
+            // A call expression type is the function return type
+            self.current_type = Some(expr.get_function_def().return_type.clone().into());
             Ok(())
         } else {
             Err(TypeCheckerError::NotCallable(expr.get_definition().clone()))
