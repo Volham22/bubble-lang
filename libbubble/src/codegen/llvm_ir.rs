@@ -104,7 +104,7 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
             AnyTypeEnum::PointerType(x) => x.as_basic_type_enum(),
             AnyTypeEnum::StructType(x) => x.as_basic_type_enum(),
             AnyTypeEnum::VectorType(x) => x.as_basic_type_enum(),
-            _ => panic!("Non basic type!"),
+            _ => panic!("Non basic type! {:?}", ty),
         }
     }
 
@@ -162,6 +162,11 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                     _ => unreachable!("Type couldn't be an array!"),
                 }
             }
+            type_system::Type::Ptr(pointee) if pointee.as_ref() == &Type::Void => self
+                .context
+                .i64_type()
+                .ptr_type(AddressSpace::default())
+                .into(),
             type_system::Type::Ptr(pointee) => {
                 match self.as_basic_type(self.to_llvm_type(pointee)) {
                     BasicTypeEnum::ArrayType(t) => t.ptr_type(AddressSpace::from(0u16)).into(),

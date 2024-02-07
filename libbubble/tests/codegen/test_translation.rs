@@ -181,6 +181,30 @@ use crate::assets::build_and_link;
     "/tmp/init_null_ptr",
     0
 )]
+#[case::malloc_single_int(
+    r#"
+    extern function malloc(size: u64): ptr void;
+    function main(): i32 {
+        let x: ptr i32 = malloc(4);
+        deref x;
+        return 0;
+}"#,
+    "/tmp/malloc_single_int",
+    0
+)]
+#[case::malloc_and_free_single_int(
+    r#"
+    extern function malloc(size: u64): ptr void;
+    extern function free(val: ptr void): void;
+    function main(): i32 {
+        let x: ptr i32 = malloc(4);
+        deref x;
+        free(x);
+        return 0;
+}"#,
+    "/tmp/malloc_and_free_single_int",
+    0
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,
