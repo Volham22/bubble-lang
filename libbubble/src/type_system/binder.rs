@@ -3,39 +3,10 @@ use std::collections::HashMap;
 use crate::ast::{
     Bindable, BreakStatement, Call, ContinueStatement, Definition, Expression, ForStatement,
     FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType, Locatable,
-    MutableVisitor, ReturnStatement, StructStatement, TokenLocation, Type, TypeKind,
-    WhileStatement,
+    MutableVisitor, ReturnStatement, StructStatement, Type, TypeKind, WhileStatement,
 };
-use thiserror::Error;
 
-use super::utils::ScopedMap;
-
-#[derive(Error, Debug)]
-pub enum BinderError<'ast> {
-    #[error("undeclared variable {name:?}")]
-    UndeclaredVariable {
-        location: &'ast TokenLocation,
-        name: String,
-    },
-    #[error("undeclared struct {name:?}")]
-    UndeclaredStruct {
-        location: &'ast TokenLocation,
-        name: String,
-    },
-    #[error("undeclared function {name:?}")]
-    UndeclaredFunction {
-        location: &'ast TokenLocation,
-        name: String,
-    },
-    #[error("'return' outside a function")]
-    BadReturn { location: &'ast TokenLocation },
-    #[error("'break' outside a loop")]
-    BadBreak { location: &'ast TokenLocation },
-    #[error("'continue' outside a loop")]
-    BadContinue { location: &'ast TokenLocation },
-    #[error("Not subscriptable expression")]
-    NotSubscriptable { location: &'ast TokenLocation },
-}
+use super::{errors::BinderError, utils::ScopedMap};
 
 #[derive(Default)]
 pub struct Binder {

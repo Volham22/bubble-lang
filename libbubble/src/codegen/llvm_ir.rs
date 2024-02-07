@@ -4,8 +4,7 @@ use inkwell::{
     module::{Linkage, Module},
     types::{AnyTypeEnum, BasicMetadataTypeEnum, BasicType, BasicTypeEnum},
     values::{
-        AnyValue, AnyValueEnum, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue,
-        PointerValue,
+        AnyValue, AnyValueEnum, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue,
     },
     AddressSpace, FloatPredicate, IntPredicate,
 };
@@ -349,15 +348,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
             self.builder
                 .build_store(
                     *store_value,
-                    match self.current_value.unwrap() {
-                        AnyValueEnum::ArrayValue(v) => v.as_basic_value_enum(),
-                        AnyValueEnum::IntValue(v) => v.as_basic_value_enum(),
-                        AnyValueEnum::FloatValue(v) => v.as_basic_value_enum(),
-                        AnyValueEnum::PointerValue(v) => v.as_basic_value_enum(),
-                        AnyValueEnum::StructValue(v) => v.as_basic_value_enum(),
-                        AnyValueEnum::VectorValue(v) => v.as_basic_value_enum(),
-                        _ => unreachable!(),
-                    },
+                    self.as_basic_value(self.current_value.unwrap()),
                 )
                 .expect("Fail to build store");
 
@@ -455,17 +446,10 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         if let Some(ref exp) = stmt.exp {
             self.visit_expression(exp)?;
 
-            // FIXME: Very ugly way to retrieve a &dyn BasicValue handle from a AnyValueEnum
             self.builder
-                .build_return(Some(match self.current_value.as_ref().unwrap() {
-                    AnyValueEnum::ArrayValue(v) => v,
-                    AnyValueEnum::IntValue(v) => v,
-                    AnyValueEnum::FloatValue(v) => v,
-                    AnyValueEnum::PointerValue(v) => v,
-                    AnyValueEnum::StructValue(v) => v,
-                    AnyValueEnum::VectorValue(v) => v,
-                    _ => panic!("value is not basic!"),
-                }))
+                .build_return(Some(
+                    &self.as_basic_value(*self.current_value.as_ref().unwrap()),
+                ))
                 .expect("Fail to build return");
         } else {
             self.builder
