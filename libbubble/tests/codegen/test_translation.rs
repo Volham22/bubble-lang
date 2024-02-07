@@ -347,6 +347,20 @@ fn test_translation(
     0,
     "42"
 )]
+#[case::deref_expression_as_lvalue_and_init(
+    r#"
+    extern function printf(msg: string, value: i32): i32;
+    function main(): i32 {
+        let x: i32 = 42;
+        let int_ptr: ptr i32 = addrof x;
+        deref int_ptr = 51;
+        printf("%d", x);
+        return 0;
+    }"#,
+    "/tmp/deref_expression_as_lvalue",
+    0,
+    "51"
+)]
 fn test_translation_with_stdout(
     #[case] code: &str,
     #[case] executable_path: &str,

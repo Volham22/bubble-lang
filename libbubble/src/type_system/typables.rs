@@ -207,3 +207,16 @@ impl Typable for Expression {
         unreachable!("Cannot set type to an expression directly");
     }
 }
+
+impl Typable for ast::Deref {
+    fn get_type(&self) -> &Type {
+        match self.expr.get_type() {
+            Type::Ptr(pointee) => pointee,
+            _ => panic!("A deref expression type must be a pointer"),
+        }
+    }
+
+    fn set_type(&mut self, _: Type) {
+        unreachable!("Can't set type to a deref expression");
+    }
+}

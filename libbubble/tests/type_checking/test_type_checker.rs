@@ -373,6 +373,16 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::deref_expression_as_lvalue(
+    r#"
+    extern function g(): ptr void;
+    function f(): i32 {
+        let x: i32 = 42;
+        let int_ptr: ptr i32 = addrof x;
+        deref int_ptr = 51;
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(

@@ -285,6 +285,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
     fn visit_assignment(&mut self, expr: &'ast mut Assignment) -> Result<(), TypeCheckerError> {
         let variable_ty = match expr.left.as_ref() {
             Expression::Literal(l) => l.get_type(),
+            Expression::Deref(deref) => deref.get_type(),
             _ => unreachable!("Left hand side is not a lvalue"),
         };
 
