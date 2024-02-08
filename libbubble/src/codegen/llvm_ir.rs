@@ -26,6 +26,7 @@ pub fn build_module<'ctx>(
     context: &'ctx Context,
     module: &Module<'ctx>,
     statements: &[GlobalStatement],
+    print_code: bool,
 ) {
     let mut frame_table = Collector::default();
     // Collect local variables and function parameters
@@ -35,7 +36,10 @@ pub fn build_module<'ctx>(
 
     let mut translator = Translator::new(context, builder, module, symbol_map);
     translator.translate_statements(statements).unwrap();
-    translator.print_code();
+
+    if print_code {
+        translator.print_code();
+    }
 }
 
 pub struct Translator<'ctx, 'ast, 'module> {
