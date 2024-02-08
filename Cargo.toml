@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "libbubble",
-    "bubble-dev"
+    "bubble-dev",
+    "bubblec"
 ]
 resolver = "2"
 

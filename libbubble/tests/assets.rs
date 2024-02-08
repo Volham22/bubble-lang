@@ -11,15 +11,13 @@ use libbubble::{
     desugar::desugar_ast,
     parser::{
         grammar::{GlobalStatementsParser, StatementsParser},
-        lexer::{Lexer, LexicalError, Token},
+        lexer::Lexer,
+        StatementsParserResult,
     },
     type_system::{binder::*, run_type_checker as type_check, TypeCheckerError},
 };
 
 const LD_LOADER_PATH: &str = "/lib64/ld-linux-x86-64.so.2";
-
-pub type StatementsParserResult<T> =
-    Result<T, lalrpop_util::ParseError<usize, Token, LexicalError>>;
 
 pub fn parse_statements_input(code: &str) -> StatementsParserResult<Statements> {
     let lexer = Lexer::new(code);
@@ -50,7 +48,7 @@ pub fn build_and_link(code: &str, outname: &str, executable_name: &str) {
     let context = Context::create();
     let module = context.create_module("module");
 
-    build_module(&context, &module, &stmts);
+    build_module(&context, &module, &stmts, true);
     Target::initialize_x86(&InitializationConfig::default());
     let target = Target::from_name("x86-64").unwrap();
     let target_machine = target

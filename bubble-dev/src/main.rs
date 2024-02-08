@@ -40,7 +40,7 @@ fn main() {
     let context = Context::create();
     let module = context.create_module("module");
 
-    build_module(&context, &module, &stmts);
+    build_module(&context, &module, &stmts, true);
     Target::initialize_x86(&InitializationConfig::default());
     let target = Target::from_name("x86-64").unwrap();
     let target_machine = target

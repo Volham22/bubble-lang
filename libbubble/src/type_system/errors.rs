@@ -92,28 +92,28 @@ impl PartialEq for TypeCheckerError {
 }
 
 #[derive(Error, Debug)]
-pub enum BinderError<'ast> {
+pub enum BinderError {
     #[error("undeclared variable {name:?}")]
     UndeclaredVariable {
-        location: &'ast TokenLocation,
+        location: TokenLocation,
         name: String,
     },
     #[error("undeclared struct {name:?}")]
     UndeclaredStruct {
-        location: &'ast TokenLocation,
+        location: TokenLocation,
         name: String,
     },
     #[error("undeclared function {name:?}")]
     UndeclaredFunction {
-        location: &'ast TokenLocation,
+        location: TokenLocation,
         name: String,
     },
     #[error("'return' outside a function")]
-    BadReturn { location: &'ast TokenLocation },
+    BadReturn { location: TokenLocation },
     #[error("'break' outside a loop")]
-    BadBreak { location: &'ast TokenLocation },
+    BadBreak { location: TokenLocation },
     #[error("'continue' outside a loop")]
-    BadContinue { location: &'ast TokenLocation },
+    BadContinue { location: TokenLocation },
     #[error("Not subscriptable expression")]
-    NotSubscriptable { location: &'ast TokenLocation },
+    NotSubscriptable { location: TokenLocation },
 }
