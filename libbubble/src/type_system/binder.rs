@@ -18,10 +18,7 @@ pub struct Binder {
 }
 
 impl Binder {
-    pub fn bind_statements<'ast>(
-        &mut self,
-        stmts: &'ast mut [GlobalStatement],
-    ) -> Result<(), BinderError<'ast>> {
+    pub fn bind_statements(&mut self, stmts: &mut [GlobalStatement]) -> Result<(), BinderError> {
         for stmt in stmts {
             self.visit_global_statement(stmt)?;
         }
@@ -53,11 +50,8 @@ impl Binder {
     }
 }
 
-impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
-    fn visit_function(
-        &mut self,
-        stmt: &'ast mut FunctionStatement,
-    ) -> Result<(), BinderError<'ast>> {
+impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
+    fn visit_function(&mut self, stmt: &'ast mut FunctionStatement) -> Result<(), BinderError> {
         self.functions_statements
             .insert(stmt.name.to_string(), stmt);
 
@@ -79,7 +73,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         Ok(())
     }
 
-    fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), BinderError<'ast>> {
+    fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), BinderError> {
         self.struct_statement.insert(stmt.name.to_string(), stmt);
 
         for (kind, _) in &mut stmt.fields {
@@ -89,7 +83,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         Ok(())
     }
 
-    fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), BinderError<'ast>> {
+    fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), BinderError> {
         self.local_variables.insert_symbol(&stmt.name, stmt);
         self.visit_expression(
             stmt.init_exp
@@ -100,7 +94,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         Ok(())
     }
 
-    fn visit_if(&mut self, stmt: &'ast mut IfStatement) -> Result<(), BinderError<'ast>> {
+    fn visit_if(&mut self, stmt: &'ast mut IfStatement) -> Result<(), BinderError> {
         self.visit_expression(&mut stmt.condition)?;
 
         self.local_variables.new_scope();
@@ -116,7 +110,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         Ok(())
     }
 
-    fn visit_while(&mut self, stmt: &'ast mut WhileStatement) -> Result<(), BinderError<'ast>> {
+    fn visit_while(&mut self, stmt: &'ast mut WhileStatement) -> Result<(), BinderError> {
         self.visit_expression(&mut stmt.condition)?;
 
         self.begin_loop();
@@ -126,7 +120,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         Ok(())
     }
 
-    fn visit_for(&mut self, stmt: &'ast mut ForStatement) -> Result<(), BinderError<'ast>> {
+    fn visit_for(&mut self, stmt: &'ast mut ForStatement) -> Result<(), BinderError> {
         self.begin_loop();
 
         self.visit_let(&mut stmt.init_decl)?;
@@ -139,10 +133,10 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         Ok(())
     }
 
-    fn visit_return(&mut self, stmt: &'ast mut ReturnStatement) -> Result<(), BinderError<'ast>> {
+    fn visit_return(&mut self, stmt: &'ast mut ReturnStatement) -> Result<(), BinderError> {
         if !self.in_function {
             Err(BinderError::BadReturn {
-                location: stmt.get_location(),
+                location: stmt.get_location().clone(),
             })
         } else {
             if let Some(ref mut exp) = stmt.exp {
@@ -153,36 +147,33 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         }
     }
 
-    fn visit_break(&mut self, stmt: &'ast mut BreakStatement) -> Result<(), BinderError<'ast>> {
+    fn visit_break(&mut self, stmt: &'ast mut BreakStatement) -> Result<(), BinderError> {
         if self.nested_loop == 0 {
             Err(BinderError::BadBreak {
-                location: stmt.get_location(),
+                location: stmt.get_location().clone(),
             })
         } else {
             Ok(())
         }
     }
 
-    fn visit_continue(
-        &mut self,
-        stmt: &'ast mut ContinueStatement,
-    ) -> Result<(), BinderError<'ast>> {
+    fn visit_continue(&mut self, stmt: &'ast mut ContinueStatement) -> Result<(), BinderError> {
         if self.nested_loop == 0 {
             Err(BinderError::BadContinue {
-                location: stmt.get_location(),
+                location: stmt.get_location().clone(),
             })
         } else {
             Ok(())
         }
     }
 
-    fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), BinderError<'ast>> {
+    fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), BinderError> {
         match &expr.literal_type {
             LiteralType::Identifier(name) => match self.local_variables.find_symbol(name) {
                 Some(var) => expr.set_definition(Definition::LocalVariable(*var)),
                 None => {
                     return Err(BinderError::UndeclaredVariable {
-                        location: expr.get_location(),
+                        location: expr.get_location().clone(),
                         name: name.clone(),
                     })
                 }
@@ -205,7 +196,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
                         Some(f) => expr.set_definition(Definition::Function(*f)),
                         None => {
                             return Err(BinderError::UndeclaredVariable {
-                                location: expr.get_location(),
+                                location: expr.get_location().clone(),
                                 name: name.clone(),
                             });
                         }
@@ -214,7 +205,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
             }
             LiteralType::ArrayAccess(_) => {
                 return Err(BinderError::NotSubscriptable {
-                    location: expr.get_location(),
+                    location: expr.get_location().clone(),
                 });
             }
             _ => (),
@@ -229,11 +220,11 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         Ok(())
     }
 
-    fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), BinderError<'ast>> {
+    fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), BinderError> {
         let declaration = self.functions_statements.get(&expr.callee);
         if declaration.is_none() {
             return Err(BinderError::UndeclaredFunction {
-                location: expr.get_location(),
+                location: expr.get_location().clone(),
                 name: expr.callee.to_string(),
             });
         }
@@ -248,7 +239,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
         Ok(())
     }
 
-    fn visit_type(&mut self, expr: &'ast mut Type) -> Result<(), BinderError<'ast>> {
+    fn visit_type(&mut self, expr: &'ast mut Type) -> Result<(), BinderError> {
         match &expr.kind {
             TypeKind::Identifier(name) => {
                 let declaration = self.struct_statement.get(name);
@@ -257,7 +248,7 @@ impl<'ast> MutableVisitor<'ast, BinderError<'ast>> for Binder {
                     Ok(())
                 } else {
                     Err(BinderError::UndeclaredStruct {
-                        location: expr.get_location(),
+                        location: expr.get_location().clone(),
                         name: name.clone(),
                     })
                 }
