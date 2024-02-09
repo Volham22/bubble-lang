@@ -176,9 +176,19 @@ Type: Type = {
 }
 
 Expr: Expression = {
-    AddrOf,
+    StructInitialization,
     <l:@L> <left:AddrOf> "=" <right:AddrOf> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
 }
+
+StructFieldInit: StructFieldInitializer = {
+    <l:@L> <val:"identifier"> ":" <exp:Expr> <r:@R> => StructFieldInitializer::new(l, r, val, Box::new(exp)),
+}
+
+StructInitialization: Expression = {
+    AddrOf,
+    <l:@L> "struct" "{" <fields_init:Comma<StructFieldInit>> "}" <r:@R> => Expression::StructInit(StructInitialization::new(l, r, fields_init)),
+}
+
 
 AddrOf: Expression = {
     Deref,

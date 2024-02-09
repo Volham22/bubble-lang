@@ -118,6 +118,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
             Expression::Deref(deref) => self.visit_deref(deref),
+            Expression::StructInit(_) => todo!(),
         }
     }
 
@@ -289,6 +290,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
             Expression::Deref(deref) => self.visit_deref(deref),
+            Expression::StructInit(_) => todo!(),
         }
     }
 

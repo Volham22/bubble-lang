@@ -1,8 +1,7 @@
 use std::ops::Deref;
 
 use crate::ast::{
-    self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Call, Expression,
-    FunctionStatement, LetStatement, Literal, Null, StructStatement,
+    self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Call, Expression, FunctionStatement, LetStatement, Literal, Null, StructInitialization, StructStatement
 };
 
 pub type FunctionParameter = (Type, String);
@@ -186,7 +185,8 @@ impl_typables!(
     ArrayAccess,
     Null,
     ArrayInitializer,
-    StructStatement
+    StructStatement,
+    StructInitialization
 );
 
 impl Typable for Expression {
@@ -199,7 +199,8 @@ impl Typable for Expression {
             Expression::Assignment(a) => a.get_type(),
             Expression::ArrayInitializer(a) => a.get_type(),
             Expression::AddrOf(_) => todo!(),
-            Expression::Deref(_) => todo!(),
+            Expression::Deref(d) => d.get_type(),
+            Expression::StructInit(_) => todo!(),
         }
     }
 
