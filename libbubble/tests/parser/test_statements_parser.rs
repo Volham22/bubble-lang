@@ -228,6 +228,22 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::nested_struct_init(
+    r#"
+    struct Pos {
+        x: Pos,
+        y: i32,
+    }
+
+    function f(): i32 {
+        let pos: Pos = struct {
+            x: struct { x: 51, y: 51 },
+            y: 42,
+        };
+        return 0;
+    }
+"#
+)]
 #[case::struct_init_trailing_comma(
     r#"
     struct Pos {
