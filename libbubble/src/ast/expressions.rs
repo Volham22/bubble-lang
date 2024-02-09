@@ -17,11 +17,36 @@ pub enum Expression {
     AddrOf(AddrOf),
     Deref(Deref),
     StructInit(StructInitialization),
+    StructAccess(StructAccess),
 }
 
 impl Expression {
     pub fn is_literal(&self) -> bool {
         matches!(self, Expression::Literal(_))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct StructAccess {
+    identifier: Box<Expression>,
+    field: Box<Expression>,
+    location: TokenLocation,
+    pub(crate) ty: Option<type_system::Type>,
+}
+
+impl StructAccess {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        identifier: Box<Expression>,
+        field: Box<Expression>,
+    ) -> Self {
+        Self {
+            identifier,
+            field,
+            location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
+        }
     }
 }
 

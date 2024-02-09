@@ -244,6 +244,38 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::nested_struct_access(
+    r#"
+    struct Pos {
+        x: Pos,
+        y: i32,
+    }
+
+    function f(): i32 {
+        let pos: Pos = struct {
+            x: struct { x: 51, y: 51 },
+            y: 42,
+        };
+        pos.x.y;
+        return 0;
+    }
+"#
+)]
+#[case::init_and_field_access(
+    r#"
+    struct Pos {
+        x: i32,
+        y: i32,
+    }
+
+    function f(): i32 {
+        let pos: Pos = struct { x: 42, y: 42 };
+        pos.x;
+        pos.y;
+        return 0;
+    }
+"#
+)]
 #[case::struct_init_trailing_comma(
     r#"
     struct Pos {

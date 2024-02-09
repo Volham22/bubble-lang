@@ -119,6 +119,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
             Expression::Deref(deref) => self.visit_deref(deref),
             Expression::StructInit(_) => todo!(),
+            Expression::StructAccess(_) => todo!(),
         }
     }
 
@@ -291,6 +292,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
             Expression::Deref(deref) => self.visit_deref(deref),
             Expression::StructInit(_) => todo!(),
+            Expression::StructAccess(_) => todo!(),
         }
     }
 
