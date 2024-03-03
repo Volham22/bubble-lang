@@ -73,7 +73,8 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 parameter
                     .declaration_type
                     .clone()
-                    .expect("Parameter has no type hint!"),
+                    .expect("Parameter has no type hint!")
+                    .kind,
             ))
         }
 
@@ -527,5 +528,29 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 self.current_type.clone().unwrap(),
             )),
         }
+    }
+
+    fn visit_struct_init(
+        &mut self,
+        stmt: &'ast mut ast::StructInitialization,
+    ) -> Result<(), TypeCheckerError> {
+        let mut init_fields_type = Vec::with_capacity(stmt.fields.len());
+
+        for field in stmt.fields.iter_mut() {
+            self.visit_expression(&mut field.init_expression)?;
+            init_fields_type.push((
+                self.current_type
+                    .as_ref()
+                    .expect("Should have a type")
+                    .to_owned(),
+                field.name.to_owned(),
+            ));
+        }
+
+        self.current_type = Some(Type::Struct {
+            name: "<struct init expression>".to_string(),
+            fields: init_fields_type,
+        });
+        Ok(())
     }
 }

@@ -1,8 +1,8 @@
 use super::{
     AddrOf, ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
     Deref, Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
-    Literal, ReturnStatement, Statement, StatementKind, Statements, StructStatement, Type,
-    TypeKind, WhileStatement,
+    Literal, ReturnStatement, Statement, StatementKind, Statements, StructInitialization,
+    StructStatement, Type, TypeKind, WhileStatement,
 };
 
 /// Default AST visitor
@@ -55,7 +55,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
 
     fn visit_let(&mut self, stmt: &'ast LetStatement) -> Result<(), E> {
         if let Some(dec_ty) = &stmt.declaration_type {
-            self.visit_type_kind(dec_ty)?;
+            self.visit_type_kind(&dec_ty.kind)?;
         }
 
         self.visit_expression(stmt.init_exp.as_ref().expect("Let has no init type!"))?;
@@ -172,6 +172,14 @@ pub trait Visitor<'ast, E: std::error::Error> {
     fn visit_deref(&mut self, expr: &'ast Deref) -> Result<(), E> {
         self.visit_expression(&expr.expr)
     }
+
+    fn visit_struct_init(&mut self, stmt: &'ast StructInitialization) -> Result<(), E> {
+        for initializer in &stmt.fields {
+            self.visit_expression(&initializer.init_expression)?;
+        }
+
+        Ok(())
+    }
 }
 
 pub trait MutableVisitor<'ast, E: std::error::Error> {
@@ -221,7 +229,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
 
     fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), E> {
         if let Some(dec_ty) = &mut stmt.declaration_type {
-            self.visit_type_kind(dec_ty)?;
+            self.visit_type_kind(&mut dec_ty.kind)?;
         }
 
         self.visit_expression(stmt.init_exp.as_mut().expect("Let has no init type!"))?;
@@ -291,7 +299,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
             Expression::Deref(deref) => self.visit_deref(deref),
-            Expression::StructInit(_) => todo!(),
+            Expression::StructInit(init) => self.visit_struct_init(init),
             Expression::StructAccess(_) => todo!(),
         }
     }
@@ -350,5 +358,13 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
 
     fn visit_deref(&mut self, expr: &'ast mut Deref) -> Result<(), E> {
         self.visit_expression(&mut expr.expr)
+    }
+
+    fn visit_struct_init(&mut self, stmt: &'ast mut StructInitialization) -> Result<(), E> {
+        for initializer in stmt.fields.iter_mut() {
+            self.visit_expression(&mut initializer.init_expression)?;
+        }
+
+        Ok(())
     }
 }

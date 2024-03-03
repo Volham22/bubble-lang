@@ -50,7 +50,7 @@ Struct: StructStatement = {
 
 Let: LetStatement = {
     <l:@L> "let" <name:"identifier"> ":" <typename:Type> "=" <init_exp: Expr> ";" <r:@R> => {
-        LetStatement::new(l, r, name, Some(typename.kind), Some(Box::new(init_exp)))
+        LetStatement::new(l, r, name, Some(typename), Some(Box::new(init_exp)))
     },
     <l:@L> "let" <name:"identifier"> "=" <init_exp: Expr> ";" <r:@R> => {
         LetStatement::new(l, r, name, None, Some(Box::new(init_exp)))
@@ -151,7 +151,7 @@ ForStatement: ForStatement = {
         ForStatement::new(
             l,
             r,
-            LetStatement::new(l, r, val, Some(typename.kind), Some(Box::new(init_expr))),
+            LetStatement::new(l, r, val, Some(typename), Some(Box::new(init_expr))),
             Box::new(continue_expr),
             Box::new(modify_expr),
             Box::new(stmts),

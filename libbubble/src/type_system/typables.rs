@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use crate::ast::{
-    self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Call, Expression,
+    self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Expression,
     FunctionStatement, LetStatement, Literal, Null, StructInitialization, StructStatement,
 };
 
@@ -86,6 +86,21 @@ impl Type {
                     array_type: rarray_rtype,
                 },
             ) => lsize == rsize && larray_type.is_compatible_with(rarray_rtype),
+            (
+                Type::Struct {
+                    fields: lfields, ..
+                },
+                Type::Struct {
+                    fields: rfields, ..
+                },
+            ) => {
+                lfields.len() == rfields.len()
+                    && lfields.iter().all(|(lf_ty, lf_name)| {
+                        rfields.iter().any(|(rf_ty, rf_name)| {
+                            lf_ty.is_compatible_with(rf_ty) && lf_name == rf_name
+                        })
+                    })
+            }
             // Void pointer is compatible with any pointer type
             (Type::Ptr(l), Type::Ptr(_)) if l.as_ref() == &Type::Void => true,
             (Type::Ptr(_), Type::Ptr(r)) if r.as_ref() == &Type::Void => true,
@@ -124,7 +139,30 @@ impl Type {
     }
 }
 
+impl From<ast::Type> for Type {
+    fn from(value: ast::Type) -> Self {
+        match value.kind {
+            ast::TypeKind::Identifier(_) => {
+                let struct_stmt = value.get_struct_def();
+                Type::Struct {
+                    name: struct_stmt.name.clone(),
+                    fields: struct_stmt
+                        .fields
+                        .iter()
+                        .map(|(ty, name)| (ty.to_owned().into(), name.to_owned()))
+                        .collect(),
+                }
+            }
+            _ => value.kind.into(),
+        }
+    }
+}
+
 impl From<ast::TypeKind> for Type {
+    /// # Panic
+    /// This panic if  value is `ast::TypeKind::Identifier(_)`. The conversion
+    /// cannot be done directly because of a struct is bound to a declaration.
+    /// Use `From<ast::Type> instead`
     fn from(value: ast::TypeKind) -> Self {
         match value {
             ast::TypeKind::U8 => Type::U8,
@@ -138,10 +176,7 @@ impl From<ast::TypeKind> for Type {
             ast::TypeKind::String => Type::String,
             ast::TypeKind::Bool => Type::Bool,
             ast::TypeKind::Float => Type::Float,
-            ast::TypeKind::Identifier(name) => Type::Struct {
-                name,
-                fields: Vec::new(),
-            },
+            ast::TypeKind::Identifier(_) => unreachable!(),
             ast::TypeKind::Void => Type::Void,
             ast::TypeKind::Array { size, array_type } => Type::Array {
                 size,

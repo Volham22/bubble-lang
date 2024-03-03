@@ -42,7 +42,13 @@ impl FunctionStatement {
             parameters: parameters
                 .iter()
                 .map(|(kind, name)| {
-                    LetStatement::new(tk_begin, tk_end, name.to_string(), Some(kind.clone()), None)
+                    LetStatement::new(
+                        tk_begin,
+                        tk_end,
+                        name.to_string(),
+                        Some(crate::ast::Type::new(tk_begin, tk_end, kind.clone())),
+                        None,
+                    )
                 })
                 .collect(),
             return_type,
@@ -57,7 +63,7 @@ impl FunctionStatement {
 #[derive(Debug, Clone)]
 pub struct LetStatement {
     pub name: String,
-    pub declaration_type: Option<TypeKind>,
+    pub declaration_type: Option<crate::ast::Type>,
     pub init_exp: Option<Box<Expression>>,
     location: TokenLocation,
     pub(crate) ty: Option<type_system::Type>,
@@ -68,7 +74,7 @@ impl LetStatement {
         tk_begin: usize,
         tk_end: usize,
         name: String,
-        declaration_type: Option<TypeKind>,
+        declaration_type: Option<crate::ast::Type>,
         init_exp: Option<Box<Expression>>,
     ) -> Self {
         Self {

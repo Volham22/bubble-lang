@@ -383,6 +383,22 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::init_struct_valid(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function f(): i32 {
+        let pos: Point = struct {
+            x: 42,
+            y: 42,
+        };
+
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -519,7 +535,7 @@ fn type_checker_valid(#[case] code: &str) {
 )]
 #[case::return_type_mismatch(
     r#"
-       function f(): float {
+       function f(): string {
            return 42;
        }
    "#,
@@ -732,6 +748,90 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::DerefNonPointer(type_system::Type::I32)
+)]
+#[case::init_struct_missing_field(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function f(): i32 {
+        let pos: Point = struct {
+            x: 42,
+        };
+
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit {
+        left: type_system::Type::Struct {
+            name: "Point".to_string(),
+            fields: vec![
+                (type_system::Type::I32, "x".to_string()),
+                (type_system::Type::I32, "y".to_string()),
+            ]
+        },
+        right: type_system::Type::Struct {
+            name: "<struct init expression>".to_string(),
+            fields: vec![
+                (type_system::Type::I32, "x".to_string())
+            ]
+        }
+    }
+)]
+#[case::init_struct_empty_init(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function f(): i32 {
+        let pos: Point = struct { };
+
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit {
+        left: type_system::Type::Struct {
+            name: "Point".to_string(),
+            fields: vec![
+                (type_system::Type::I32, "x".to_string()),
+                (type_system::Type::I32, "y".to_string()),
+            ]
+        },
+        right: type_system::Type::Struct {
+            name: "<struct init expression>".to_string(),
+            fields: vec![]
+        }
+    }
+)]
+#[case::struct_init_name_mismatch(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function f(): i32 {
+        let pos: Point = struct { x: 32, a: 37 };
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit {
+        left: type_system::Type::Struct {
+            name: "Point".to_string(),
+            fields: vec![
+                (type_system::Type::I32, "x".to_string()),
+                (type_system::Type::I32, "y".to_string()),
+            ]
+        },
+        right: type_system::Type::Struct {
+            name: "<struct init expression>".to_string(),
+            fields: vec![
+                (type_system::Type::I32, "x".to_string()),
+                (type_system::Type::I32, "a".to_string()),
+            ]
+        }
+    }
 )]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);

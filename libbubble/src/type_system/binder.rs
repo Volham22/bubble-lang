@@ -85,6 +85,12 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
 
     fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), BinderError> {
         self.local_variables.insert_symbol(&stmt.name, stmt);
+
+        // Bind type identifier to its concrete type
+        if let Some(ty) = &mut stmt.declaration_type {
+            self.visit_type(ty)?;
+        }
+
         self.visit_expression(
             stmt.init_exp
                 .as_mut()
