@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use crate::ast::*;
+use crate::ast::{self, *};
 
 use super::{errors::TypeCheckerError, Typable, Type};
 
@@ -130,7 +130,40 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
         )?;
 
         if self.is_int {
-            match stmt.declaration_type {
+            match stmt.declaration_type.as_ref() {
+                Some(ast::Type {
+                    kind: ast::TypeKind::Identifier(_),
+                    definition: Some(_),
+                    ..
+                }) => {
+                    let strct = stmt.declaration_type.as_ref().unwrap().get_struct_def();
+                    let ast::Expression::StructInit(init_exp) = stmt
+                        .init_exp
+                        .as_mut()
+                        .expect("Init expression must be present")
+                        .as_mut()
+                    else {
+                        panic!("Struct intialized with a non struct init type");
+                    };
+
+                    for (ty, name) in strct
+                        .fields
+                        .iter()
+                        .filter(|(ty, _)| ty.is_integer())
+                        .map::<(Type, &String), fn(&(ast::TypeKind, String)) -> (Type, &String)>(
+                            |(ty, name)| (ty.to_owned().into(), name),
+                        )
+                        .collect::<Vec<(Type, &String)>>()
+                    {
+                        let init_field = init_exp
+                            .fields
+                            .iter_mut()
+                            .find(|f| &f.name == name)
+                            .expect("Field must be present");
+                        let mut type_setter = ExpressionTypeSetter::new(&ty);
+                        type_setter.set_type_recusively(&mut init_field.init_expression);
+                    }
+                }
                 Some(_) => {
                     let statement_ty = match stmt.get_type() {
                         // If it's an array we need to set inner expression type to the base type
@@ -143,16 +176,16 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
                             .as_mut()
                             .expect("Let statement has no init exp"),
                     );
-
-                    Ok(())
                 }
-                None => Err(TypeCheckerError::InferenceError(
-                    stmt.get_location().clone(),
-                )),
-            }
-        } else {
-            Ok(())
+                None => {
+                    return Err(TypeCheckerError::InferenceError(
+                        stmt.get_location().clone(),
+                    ))
+                }
+            };
         }
+
+        Ok(())
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), TypeCheckerError> {
