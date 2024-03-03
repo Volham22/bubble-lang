@@ -52,8 +52,8 @@ impl StructAccess {
 
 #[derive(Clone, Debug)]
 pub struct StructFieldInitializer {
-    name: String,
-    init_expression: Box<Expression>,
+    pub name: String,
+    pub init_expression: Box<Expression>,
     location: TokenLocation,
     pub(crate) ty: Option<type_system::Type>,
 }
