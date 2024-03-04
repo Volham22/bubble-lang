@@ -70,6 +70,8 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
             self.local_variables.delete_scope();
         }
 
+        self.visit_type(&mut stmt.return_type)?;
+
         Ok(())
     }
 

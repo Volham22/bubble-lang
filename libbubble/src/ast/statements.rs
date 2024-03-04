@@ -4,7 +4,6 @@ use super::{
     expressions::Expression,
     impl_locatable,
     location::{Locatable, TokenLocation},
-    TypeKind,
 };
 
 #[derive(Debug, Clone)]
@@ -20,7 +19,7 @@ pub type FunctionParameter = (crate::ast::Type, String);
 pub struct FunctionStatement {
     pub name: String,
     pub parameters: Vec<LetStatement>,
-    pub return_type: TypeKind,
+    pub return_type: crate::ast::Type,
     pub is_extern: bool,
     pub body: Option<Statements>,
     pub(crate) location: TokenLocation,
@@ -33,7 +32,7 @@ impl FunctionStatement {
         tk_end: usize,
         name: String,
         parameters: Vec<FunctionParameter>,
-        return_type: TypeKind,
+        return_type: crate::ast::Type,
         is_extern: bool,
         body: Option<Statements>,
     ) -> Self {

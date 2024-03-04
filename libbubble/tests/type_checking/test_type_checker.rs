@@ -419,6 +419,22 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::function_return_struct(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function create_point(): Point {
+        return struct { x: 0, y: 0 };
+    }
+
+    function f(): i32 {
+        let pos: Point = create_point();
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -892,6 +908,38 @@ fn type_checker_valid(#[case] code: &str) {
                     fields: vec![(type_system::Type::Int, "that".to_string())]
                 }, "y".to_string())
             ]
+        }
+    }
+)]
+#[case::function_return_struct(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function create_point(): Point {
+        return struct { x: 0, p: 0 };
+    }
+
+    function f(): i32 {
+        let pos: Point = create_point();
+        return 0;
+    }"#,
+    type_system::TypeCheckerError::ReturnTypeMismatch {
+        got: type_system::Type::Struct {
+            name: "<struct initialization expression>".to_string(),
+            fields: vec![
+                (type_system::Type::I32, "x".to_string()),
+                (type_system::Type::I32, "p".to_string()),
+            ],
+        },
+        expected: type_system::Type::Struct {
+            name: "Point".to_string(),
+            fields: vec![
+                (type_system::Type::I32, "x".to_string()),
+                (type_system::Type::I32, "y".to_string()),
+            ],
         }
     }
 )]

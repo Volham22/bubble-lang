@@ -77,7 +77,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         }
         self.write("): ")?;
 
-        self.visit_type_kind(&stmt.return_type)?;
+        self.visit_type(&stmt.return_type)?;
         self.write(" {")?;
         self.indent_and_newline()?;
 
