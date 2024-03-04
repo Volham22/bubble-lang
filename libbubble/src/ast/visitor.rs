@@ -46,8 +46,8 @@ pub trait Visitor<'ast, E: std::error::Error> {
     }
 
     fn visit_struct(&mut self, stmt: &'ast StructStatement) -> Result<(), E> {
-        for (kind, _) in &stmt.fields {
-            self.visit_type_kind(kind)?;
+        for (ty, _) in &stmt.fields {
+            self.visit_type_kind(&ty.kind)?;
         }
 
         Ok(())
@@ -221,8 +221,8 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
     }
 
     fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), E> {
-        for (kind, _) in &mut stmt.fields {
-            self.visit_type_kind(kind)?;
+        for (ty, _) in &mut stmt.fields {
+            self.visit_type_kind(&mut ty.kind)?;
         }
         Ok(())
     }

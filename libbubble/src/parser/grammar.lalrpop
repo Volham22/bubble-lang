@@ -71,7 +71,7 @@ Continue: ContinueStatement = {
 }
 
 Parameter: FunctionParameter = {
-    <name:"identifier"> ":" <ty:Type> => (ty.kind, name),
+    <name:"identifier"> ":" <ty:Type> => (ty, name),
 }
 
 pub Statements: Statements = {

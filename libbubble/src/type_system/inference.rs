@@ -149,18 +149,16 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
                     for (ty, name) in strct
                         .fields
                         .iter()
-                        .filter(|(ty, _)| ty.is_integer())
-                        .map::<(Type, &String), fn(&(ast::TypeKind, String)) -> (Type, &String)>(
-                            |(ty, name)| (ty.to_owned().into(), name),
-                        )
-                        .collect::<Vec<(Type, &String)>>()
+                        .filter(|(ty, _)| ty.kind.is_integer())
+                        .collect::<Vec<&(ast::Type, String)>>()
                     {
                         let init_field = init_exp
                             .fields
                             .iter_mut()
                             .find(|f| &f.name == name)
                             .expect("Field must be present");
-                        let mut type_setter = ExpressionTypeSetter::new(&ty);
+                        let type_system_ty = Type::from(ty.to_owned());
+                        let mut type_setter = ExpressionTypeSetter::new(&type_system_ty);
                         type_setter.set_type_recusively(&mut init_field.init_expression);
                     }
                 }

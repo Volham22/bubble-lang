@@ -14,7 +14,7 @@ pub enum GlobalStatement {
     Let(LetStatement),
 }
 
-pub type FunctionParameter = (TypeKind, String);
+pub type FunctionParameter = (crate::ast::Type, String);
 
 #[derive(Debug, Clone)]
 pub struct FunctionStatement {
@@ -40,16 +40,8 @@ impl FunctionStatement {
         Self {
             name,
             parameters: parameters
-                .iter()
-                .map(|(kind, name)| {
-                    LetStatement::new(
-                        tk_begin,
-                        tk_end,
-                        name.to_string(),
-                        Some(crate::ast::Type::new(tk_begin, tk_end, kind.clone())),
-                        None,
-                    )
-                })
+                .into_iter()
+                .map(|(kind, name)| LetStatement::new(tk_begin, tk_end, name, Some(kind), None))
                 .collect(),
             return_type,
             is_extern,

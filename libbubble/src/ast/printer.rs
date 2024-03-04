@@ -95,9 +95,9 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         self.write(&format!("struct {} {{", stmt.name))?;
         self.indent_and_newline()?;
 
-        for (kind, name) in &stmt.fields {
+        for (ty, name) in &stmt.fields {
             self.write(&format!("{}: ", name))?;
-            self.visit_type_kind(kind)?;
+            self.visit_type_kind(&ty.kind)?;
             self.write(",\n")?;
         }
 
