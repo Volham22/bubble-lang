@@ -134,7 +134,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             fields: stmt
                 .fields
                 .iter()
-                .map(|(kind, name)| (Type::from(kind.clone()), name.clone()))
+                .map(|(ty, name)| (Type::from(ty.to_owned()), name.to_owned()))
                 .collect(),
         });
 

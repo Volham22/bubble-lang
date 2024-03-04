@@ -76,8 +76,8 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
     fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), BinderError> {
         self.struct_statement.insert(stmt.name.to_string(), stmt);
 
-        for (kind, _) in &mut stmt.fields {
-            self.visit_type_kind(kind)?;
+        for (ty, _) in stmt.fields.iter_mut() {
+            self.visit_type(ty)?;
         }
 
         Ok(())

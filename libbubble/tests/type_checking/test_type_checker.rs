@@ -399,6 +399,26 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::nested_struct_init(
+    r#"
+    struct Thing {
+        that: bool,
+    }
+
+    struct Point {
+        x: i32,
+        y: Thing,
+    }
+
+    function f(): i32 {
+        let pos: Point = struct {
+            x: 42,
+            y: struct { that: false },
+        };
+
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
@@ -829,6 +849,48 @@ fn type_checker_valid(#[case] code: &str) {
             fields: vec![
                 (type_system::Type::I32, "x".to_string()),
                 (type_system::Type::I32, "a".to_string()),
+            ]
+        }
+    }
+)]
+#[case::nested_struct_init_bad_type(
+    r#"
+    struct Thing {
+        that: bool,
+    }
+
+    struct Point {
+        x: i32,
+        y: Thing,
+    }
+
+    function f(): i32 {
+        let pos: Point = struct {
+            x: 42,
+            y: struct { that: 42 },
+        };
+
+        return 0;
+    }"#,
+    TypeCheckerError::BadInit {
+        left: type_system::Type::Struct {
+            name: "Point".to_string(),
+            fields: vec![
+                (type_system::Type::I32, "x".to_string()),
+                (type_system::Type::Struct {
+                    name: "Thing".to_string(),
+                    fields: vec![(type_system::Type::Bool, "that".to_string())]
+                }, "y".to_string()),
+            ]
+        },
+        right: type_system::Type::Struct {
+            name: "<struct init expression>".to_string(),
+            fields: vec![
+                (type_system::Type::I32, "x".to_string()),
+                (type_system::Type::Struct {
+                    name: "Thing".to_string(),
+                    fields: vec![(type_system::Type::Int, "that".to_string())]
+                }, "y".to_string())
             ]
         }
     }
