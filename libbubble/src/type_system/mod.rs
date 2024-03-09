@@ -2,6 +2,7 @@ pub mod binder;
 mod errors;
 mod inference;
 mod rename;
+mod sound;
 mod typables;
 mod type_checker;
 mod type_setter;

@@ -44,6 +44,8 @@ pub enum TypeCheckerError {
     IndexNotInteger { got: Type },
     #[error("Deref a non pointer type: {0:?}.")]
     DerefNonPointer(Type),
+    #[error("{0:}: Self referential struct are not allowed.")]
+    SelfReferentialStruct(String),
 }
 
 impl PartialEq for TypeCheckerError {
@@ -86,6 +88,9 @@ impl PartialEq for TypeCheckerError {
             ) | (
                 TypeCheckerError::NonSubscriptable { .. },
                 TypeCheckerError::NonSubscriptable { .. },
+            ) | (
+                TypeCheckerError::SelfReferentialStruct(_),
+                TypeCheckerError::SelfReferentialStruct(_),
             )
         )
     }

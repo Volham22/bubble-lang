@@ -248,19 +248,22 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
     }
 
     fn visit_type(&mut self, expr: &'ast mut Type) -> Result<(), BinderError> {
-        match &expr.kind {
+        match &mut expr.kind {
             TypeKind::Identifier(name) => {
-                let declaration = self.struct_statement.get(name);
+                let name = name.clone();
+                let declaration = self.struct_statement.get(&name);
                 if let Some(dec) = declaration {
                     expr.set_definition(Definition::Struct(*dec));
                     Ok(())
                 } else {
                     Err(BinderError::UndeclaredStruct {
                         location: expr.get_location().clone(),
-                        name: name.clone(),
+                        name,
                     })
                 }
             }
+            TypeKind::Ptr(ty) => self.visit_type(ty),
+            TypeKind::Array { array_type, .. } => self.visit_type(array_type),
             _ => Ok(()),
         }
     }

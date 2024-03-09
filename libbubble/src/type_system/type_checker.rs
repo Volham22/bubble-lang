@@ -8,8 +8,8 @@ use crate::ast::{
 };
 
 use super::{
-    errors::TypeCheckerError, inference::IntegerInference, type_setter::ExpressionTypeSetter,
-    Typable, Type,
+    errors::TypeCheckerError, inference::IntegerInference, sound::SoundChecker,
+    type_setter::ExpressionTypeSetter, Typable, Type,
 };
 
 pub fn run_type_checker(stmts: &mut [GlobalStatement]) -> Result<(), TypeCheckerError> {
@@ -129,6 +129,9 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
     }
 
     fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), TypeCheckerError> {
+        let mut checker = SoundChecker::new(&stmt.name);
+        checker.check(stmt)?;
+
         stmt.set_type(Type::Struct {
             name: stmt.name.clone(),
             fields: stmt

@@ -153,7 +153,26 @@ impl From<ast::Type> for Type {
                         .collect(),
                 }
             }
-            _ => value.kind.into(),
+            ast::TypeKind::U8 => Type::U8,
+            ast::TypeKind::U16 => Type::U16,
+            ast::TypeKind::U32 => Type::U32,
+            ast::TypeKind::U64 => Type::U64,
+            ast::TypeKind::I8 => Type::I8,
+            ast::TypeKind::I16 => Type::I16,
+            ast::TypeKind::I32 => Type::I32,
+            ast::TypeKind::I64 => Type::I64,
+            ast::TypeKind::String => Type::String,
+            ast::TypeKind::Bool => Type::Bool,
+            ast::TypeKind::Float => Type::Float,
+            ast::TypeKind::Void => Type::Void,
+            ast::TypeKind::Array { size, array_type } => Type::Array {
+                size,
+                array_type: Box::new(array_type.kind.into()),
+            },
+            ast::TypeKind::Ptr(ptr) => Type::Ptr(Box::new(ptr.deref().to_owned().into())),
+            ast::TypeKind::Null { .. } => Type::Null {
+                concrete_type: None,
+            },
         }
     }
 }
@@ -182,7 +201,7 @@ impl From<ast::TypeKind> for Type {
                 size,
                 array_type: Box::new(array_type.kind.into()),
             },
-            ast::TypeKind::Ptr(ptr) => Type::Ptr(Box::new(ptr.deref().to_owned().kind.into())),
+            ast::TypeKind::Ptr(ptr) => Type::Ptr(Box::new(ptr.deref().to_owned().into())),
             ast::TypeKind::Null { .. } => Type::Null {
                 concrete_type: None,
             },
