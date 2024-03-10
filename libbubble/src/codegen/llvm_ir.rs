@@ -184,6 +184,7 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
             type_system::Type::Null { concrete_type } => {
                 self.to_llvm_type(concrete_type.as_ref().expect("Should have a concrete type"))
             }
+            type_system::Type::StructRef { .. } => todo!(),
         }
     }
 

@@ -5,6 +5,8 @@ use crate::ast::{
     FunctionStatement, LetStatement, Literal, Null, StructInitialization, StructStatement,
 };
 
+use super::sound::SoundChecker;
+
 pub type FunctionParameter = (Type, String);
 
 #[derive(Clone, Debug, PartialEq)]
@@ -24,6 +26,12 @@ pub enum Type {
     Float,
     String,
     Bool,
+    /// Like a struct but this one, can reference itself, using a pointer to its own type
+    StructRef {
+        name: String,
+        fields: Vec<FunctionParameter>,
+        self_reference_names: Vec<String>,
+    },
     Struct {
         name: String,
         fields: Vec<FunctionParameter>,
@@ -142,15 +150,36 @@ impl Type {
 impl From<ast::Type> for Type {
     fn from(value: ast::Type) -> Self {
         match value.kind {
-            ast::TypeKind::Identifier(_) => {
+            ast::TypeKind::Identifier(ref id) => {
                 let struct_stmt = value.get_struct_def();
-                Type::Struct {
-                    name: struct_stmt.name.clone(),
-                    fields: struct_stmt
-                        .fields
-                        .iter()
-                        .map(|(ty, name)| (ty.to_owned().into(), name.to_owned()))
-                        .collect(),
+                let mut checker = SoundChecker::new(id);
+                match checker.get_safe_self_references(struct_stmt) {
+                    Ok(&[]) => Type::Struct {
+                        name: struct_stmt.name.clone(),
+                        fields: struct_stmt
+                            .fields
+                            .iter()
+                            .map(|(ty, name)| (ty.to_owned().into(), name.to_owned()))
+                            .collect(),
+                    },
+                    Ok(fields) => Type::StructRef {
+                        name: struct_stmt.name.clone(),
+                        fields: struct_stmt
+                            .fields
+                            .iter()
+                            // Remove all fields that are self referential.
+                            // TODO: Use `box_patterns` to simplify the expression once stabilized
+                            .filter(|(ty, _)| {
+                                !matches!(&ty.kind, ast::TypeKind::Ptr(ptr_ty)
+                                                       if matches!(&ptr_ty.as_ref().kind,
+                                                                   ast::TypeKind::Identifier(id)
+                                                                   if fields.contains(id)))
+                            })
+                            .map(|(ty, name)| (ty.to_owned().into(), name.to_owned()))
+                            .collect(),
+                        self_reference_names: fields.iter().map(|f| f.to_owned()).collect(),
+                    },
+                    Err(e) => panic!("Sound checker encountered an error: {e:?}"),
                 }
             }
             ast::TypeKind::U8 => Type::U8,

@@ -435,18 +435,17 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
-// TODO: Fix self_referential_struct_with_pointer_field
-// #[case::self_referential_struct_with_pointer_field(
-//     r#"
-//     struct Point {
-//         x: i32,
-//         next: ptr Point,
-//     }
-//
-//     function f(): i32 {
-//         return 0;
-//     }"#
-// )]
+#[case::self_referential_struct_with_pointer_field(
+    r#"
+    struct Point {
+        x: i32,
+        next: ptr Point,
+    }
+
+    function f(): i32 {
+        return 0;
+    }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(
