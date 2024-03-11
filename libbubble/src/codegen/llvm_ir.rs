@@ -872,4 +872,21 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
 
         Ok(())
     }
+
+    fn visit_struct_init(
+        &mut self,
+        stmt: &'ast ast::StructInitialization,
+    ) -> Result<(), Infallible> {
+        println!("init stmt: {:?}", stmt.get_type());
+        let llvm_ty = self.to_llvm_type(stmt.get_type()).into_struct_type();
+        let mut init_values = Vec::with_capacity(stmt.fields.len());
+
+        for value in &stmt.fields {
+            self.visit_expression(&value.init_expression)?;
+            init_values.push(self.as_basic_value(self.current_value.expect("Should have a value")));
+        }
+
+        self.current_value = Some(llvm_ty.const_named_struct(&init_values).into());
+        Ok(())
+    }
 }

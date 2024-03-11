@@ -23,6 +23,8 @@ pub fn run_type_checker(stmts: &mut [GlobalStatement]) -> Result<(), TypeChecker
     Ok(())
 }
 
+const INIT_STRUCT_EXPRESSION: &str = "<struct init expression>";
+
 #[derive(Default)]
 pub struct TypeChecker {
     current_type: Option<Type>,
@@ -550,8 +552,12 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             ));
         }
 
+        stmt.set_type(Type::Struct {
+            name: INIT_STRUCT_EXPRESSION.to_string(),
+            fields: init_fields_type.clone(),
+        });
         self.current_type = Some(Type::Struct {
-            name: "<struct init expression>".to_string(),
+            name: INIT_STRUCT_EXPRESSION.to_string(),
             fields: init_fields_type,
         });
         Ok(())
