@@ -146,6 +146,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
                         panic!("Struct intialized with a non struct init type");
                     };
 
+                    // Infer types for integer fields
                     for (ty, name) in strct
                         .fields
                         .iter()
@@ -161,6 +162,32 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
                         let mut type_setter = ExpressionTypeSetter::new(&type_system_ty);
                         type_setter.set_type_recusively(&mut init_field.init_expression);
                     }
+
+                    // Update fields infered type in struct init expression type
+                    let StructInitialization {
+                        ty:
+                            Some(Type::Struct {
+                                fields: struct_init_fields,
+                                ..
+                            }),
+                        ..
+                    } = init_exp
+                    else {
+                        panic!("struct init expression type isn't a struct type");
+                    };
+
+                    struct_init_fields.clear();
+                    let new_fields = init_exp
+                        .fields
+                        .iter()
+                        .map(|init| {
+                            (
+                                init.init_expression.get_type().clone(),
+                                init.name.to_owned(),
+                            )
+                        })
+                        .collect::<Vec<(Type, String)>>();
+                    struct_init_fields.extend(new_fields);
                 }
                 Some(_) => {
                     let statement_ty = match stmt.get_type() {
