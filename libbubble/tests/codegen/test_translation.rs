@@ -205,6 +205,19 @@ use crate::assets::build_and_link;
     "/tmp/malloc_and_free_single_int",
     0
 )]
+#[case::struct_declare(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+    function main(): i32 {
+        let x: Point = struct { x: 42, y: 51 };
+        return 0;
+}"#,
+    "/tmp/struct_declare",
+    0
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,

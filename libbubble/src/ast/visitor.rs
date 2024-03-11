@@ -104,6 +104,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
     fn visit_break(&mut self, _: &'ast BreakStatement) -> Result<(), E> {
         Ok(())
     }
+
     fn visit_continue(&mut self, _: &'ast ContinueStatement) -> Result<(), E> {
         Ok(())
     }
@@ -118,7 +119,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             Expression::ArrayInitializer(aa) => self.visit_array_initializer(aa),
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
             Expression::Deref(deref) => self.visit_deref(deref),
-            Expression::StructInit(_) => todo!(),
+            Expression::StructInit(init) => self.visit_struct_init(init),
             Expression::StructAccess(_) => todo!(),
         }
     }

@@ -139,7 +139,16 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
                 .ptr_type(AddressSpace::default())
                 .into(),
             type_system::Type::Bool => self.context.bool_type().into(),
-            type_system::Type::Struct { .. } => todo!(),
+            type_system::Type::Struct { fields, .. } => self
+                .context
+                .struct_type(
+                    &fields
+                        .iter()
+                        .map(|(field_ty, _)| self.as_basic_type(self.to_llvm_type(field_ty)))
+                        .collect::<Vec<BasicTypeEnum>>(),
+                    false,
+                )
+                .into(),
             type_system::Type::Function {
                 parameters,
                 return_type,
@@ -299,7 +308,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
     }
 
     fn visit_struct(&mut self, _: &'ast StructStatement) -> Result<(), Infallible> {
-        todo!("Implement struct!")
+        Ok(())
     }
 
     fn visit_let(&mut self, stmt: &'ast LetStatement) -> Result<(), Infallible> {
