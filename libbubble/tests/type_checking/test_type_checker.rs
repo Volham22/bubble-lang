@@ -435,6 +435,18 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::field_access(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function f(): i32 {
+        let pos: Point = struct { x: 42, y: 51 };
+        return pos.x;
+    }"#
+)]
 #[case::self_referential_struct_with_pointer_field(
     r#"
     struct Point {

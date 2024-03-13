@@ -1,8 +1,8 @@
 use super::{
     AddrOf, ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
     Deref, Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
-    Literal, ReturnStatement, Statement, StatementKind, Statements, StructInitialization,
-    StructStatement, Type, TypeKind, WhileStatement,
+    Literal, ReturnStatement, Statement, StatementKind, Statements, StructAccess,
+    StructInitialization, StructStatement, Type, TypeKind, WhileStatement,
 };
 
 /// Default AST visitor
@@ -301,7 +301,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
             Expression::Deref(deref) => self.visit_deref(deref),
             Expression::StructInit(init) => self.visit_struct_init(init),
-            Expression::StructAccess(_) => todo!(),
+            Expression::StructAccess(sa) => self.visit_struct_access(sa),
         }
     }
 
@@ -367,5 +367,10 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
         }
 
         Ok(())
+    }
+
+    fn visit_struct_access(&mut self, stmt: &'ast mut StructAccess) -> Result<(), E> {
+        self.visit_expression(&mut stmt.identifier)?;
+        self.visit_expression(&mut stmt.field)
     }
 }

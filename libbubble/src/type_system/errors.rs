@@ -46,6 +46,14 @@ pub enum TypeCheckerError {
     DerefNonPointer(Type),
     #[error("{0:}: Self referential struct are not allowed.")]
     SelfReferentialStruct(String),
+    #[error("Field '{field_name}' is no present in struct '{struct_name}'")]
+    NoSuchField {
+        field_name: String,
+        struct_name: String,
+        location: TokenLocation,
+    },
+    #[error("Left hand side of a field access is not a structure")]
+    NonStructLhsAccess(TokenLocation),
 }
 
 impl PartialEq for TypeCheckerError {
@@ -121,4 +129,6 @@ pub enum BinderError {
     BadContinue { location: TokenLocation },
     #[error("Not subscriptable expression")]
     NotSubscriptable { location: TokenLocation },
+    #[error("Access expression must be a field")]
+    NonIdentifierFieldAccess(TokenLocation),
 }

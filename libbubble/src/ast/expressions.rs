@@ -28,10 +28,10 @@ impl Expression {
 
 #[derive(Clone, Debug)]
 pub struct StructAccess {
-    identifier: Box<Expression>,
-    field: Box<Expression>,
+    pub identifier: Box<Expression>,
+    pub field: Box<Expression>,
     location: TokenLocation,
-    pub(crate) ty: Option<type_system::Type>,
+    pub(crate) definition: Option<Definition>,
 }
 
 impl StructAccess {
@@ -45,7 +45,7 @@ impl StructAccess {
             identifier,
             field,
             location: TokenLocation::new(tk_begin, tk_end),
-            ty: None,
+            definition: None,
         }
     }
 }
@@ -310,6 +310,7 @@ impl_locatable!(
     Deref,
     Literal,
     Null,
+    StructAccess,
     StructFieldInitializer,
     StructInitialization
 );

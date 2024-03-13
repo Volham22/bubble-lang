@@ -218,6 +218,19 @@ use crate::assets::build_and_link;
     "/tmp/struct_declare",
     0
 )]
+#[case::struct_access_field(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+    function main(): i32 {
+        let p: Point = struct { x: 42, y: 51 };
+        return p.x;
+}"#,
+    "/tmp/struct_access_field",
+    42
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,

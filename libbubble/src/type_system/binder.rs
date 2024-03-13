@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::ast::{
     Bindable, BreakStatement, Call, ContinueStatement, Definition, Expression, ForStatement,
     FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType, Locatable,
-    MutableVisitor, ReturnStatement, StructStatement, Type, TypeKind, WhileStatement,
+    MutableVisitor, ReturnStatement, StructAccess, StructStatement, Type, TypeKind, WhileStatement,
 };
 
 use super::{errors::BinderError, utils::ScopedMap};
@@ -266,5 +266,28 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
             TypeKind::Array { array_type, .. } => self.visit_type(array_type),
             _ => Ok(()),
         }
+    }
+
+    fn visit_struct_access(&mut self, stmt: &'ast mut StructAccess) -> Result<(), BinderError> {
+        self.visit_expression(&mut stmt.identifier)?;
+        let Expression::Literal(Literal {
+            literal_type: LiteralType::Identifier(struct_name),
+            ..
+        }) = stmt.identifier.as_ref()
+        else {
+            return Err(BinderError::NonIdentifierFieldAccess(
+                stmt.get_location().to_owned(),
+            ));
+        };
+
+        let strct = self.local_variables.find_symbol(struct_name).ok_or(
+            BinderError::UndeclaredVariable {
+                location: stmt.get_location().to_owned(),
+                name: struct_name.to_owned(),
+            },
+        )?;
+
+        stmt.definition = Some(Definition::LocalVariable(*strct));
+        Ok(())
     }
 }
