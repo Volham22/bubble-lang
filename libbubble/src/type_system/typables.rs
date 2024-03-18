@@ -2,7 +2,8 @@ use std::ops::Deref;
 
 use crate::ast::{
     self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Expression,
-    FunctionStatement, LetStatement, Literal, Null, StructInitialization, StructStatement,
+    FunctionStatement, LetStatement, Literal, Null, StructAccess, StructInitialization,
+    StructStatement,
 };
 
 use super::sound::SoundChecker;
@@ -244,7 +245,7 @@ pub trait Typable {
 }
 
 macro_rules! impl_typables {
-    ( $( $name:ty ),* ) => {
+    ( $( $name:ty ),* $(,)? ) => {
         $(
             impl Typable for $name {
                 fn get_type(&self) -> &Type {
@@ -260,17 +261,18 @@ macro_rules! impl_typables {
 }
 
 impl_typables!(
+    ArrayAccess,
+    ArrayInitializer,
     Assignment,
     BinaryOperation,
     Call,
     FunctionStatement,
     LetStatement,
     Literal,
-    ArrayAccess,
     Null,
-    ArrayInitializer,
+    StructAccess,
+    StructInitialization,
     StructStatement,
-    StructInitialization
 );
 
 impl Typable for Expression {

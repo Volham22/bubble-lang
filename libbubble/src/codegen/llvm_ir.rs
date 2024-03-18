@@ -889,4 +889,65 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         self.current_value = Some(llvm_ty.const_named_struct(&init_values).into());
         Ok(())
     }
+
+    fn visit_struct_access(&mut self, expr: &'ast ast::StructAccess) -> Result<(), Infallible> {
+        self.visit_expression(&expr.identifier)?;
+        // If it's an identifier, we don't visit the expression to avoid emitting a load because
+        // we need the pointer value
+        let llvm_value = match expr.identifier.as_ref() {
+            ast::Expression::Literal(Literal {
+                literal_type: ast::LiteralType::Identifier(name),
+                ..
+            }) => *self
+                .variables
+                .get(name.as_str())
+                .expect("undeclared variable"),
+            _ => {
+                self.visit_expression(&expr.identifier)?;
+                self.current_value
+                    .as_ref()
+                    .expect("identifier has no value")
+                    .into_pointer_value()
+            }
+        };
+
+        let struct_ty = self.as_basic_type(self.to_llvm_type(expr.identifier.get_type()));
+        let type_system::Type::Struct {
+            fields: struct_fields,
+            ..
+        } = expr.identifier.get_type()
+        else {
+            panic!("left hand side of struct access is not a struct type!");
+        };
+        let ast::Expression::Literal(Literal {
+            literal_type: ast::LiteralType::Identifier(access_field_name),
+            ..
+        }) = expr.field.as_ref()
+        else {
+            panic!("right hand side of struct access is not an identifier");
+        };
+
+        let struct_gep_pointer = self
+            .builder
+            .build_struct_gep(
+                struct_ty,
+                llvm_value,
+                struct_fields
+                    .iter()
+                    .position(|(_, field_name)| field_name == access_field_name)
+                    .expect("Field is not present in struct!") as u32,
+                "struct_gep",
+            )
+            .expect("Failed to build struct gep");
+
+        let field_llvm_ty = self.as_basic_type(self.to_llvm_type(expr.get_type()));
+        self.current_value = Some(
+            self.builder
+                .build_load(field_llvm_ty, struct_gep_pointer, "load_struct_gep")
+                .expect("Failed to build struct gep load")
+                .into(),
+        );
+
+        Ok(())
+    }
 }

@@ -32,6 +32,7 @@ pub struct StructAccess {
     pub field: Box<Expression>,
     location: TokenLocation,
     pub(crate) definition: Option<Definition>,
+    pub(crate) ty: Option<type_system::Type>,
 }
 
 impl StructAccess {
@@ -46,6 +47,7 @@ impl StructAccess {
             field,
             location: TokenLocation::new(tk_begin, tk_end),
             definition: None,
+            ty: None,
         }
     }
 }

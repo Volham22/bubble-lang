@@ -120,7 +120,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             Expression::AddrOf(addrof) => self.visit_addrof(addrof),
             Expression::Deref(deref) => self.visit_deref(deref),
             Expression::StructInit(init) => self.visit_struct_init(init),
-            Expression::StructAccess(_) => todo!(),
+            Expression::StructAccess(sa) => self.visit_struct_access(sa),
         }
     }
 
@@ -180,6 +180,11 @@ pub trait Visitor<'ast, E: std::error::Error> {
         }
 
         Ok(())
+    }
+
+    fn visit_struct_access(&mut self, expr: &'ast StructAccess) -> Result<(), E> {
+        self.visit_expression(&expr.identifier)?;
+        self.visit_expression(&expr.field)
     }
 }
 

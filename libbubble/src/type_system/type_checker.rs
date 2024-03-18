@@ -565,36 +565,37 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
 
     fn visit_struct_access(
         &mut self,
-        stmt: &'ast mut ast::StructAccess,
+        expr: &'ast mut ast::StructAccess,
     ) -> Result<(), TypeCheckerError> {
-        self.visit_expression(&mut stmt.identifier)?;
+        self.visit_expression(&mut expr.identifier)?;
         let Type::Struct {
             name: struct_name,
             fields: struct_fields,
         } = self.current_type.as_ref().expect("Should have a type")
         else {
             return Err(TypeCheckerError::NonStructLhsAccess(
-                stmt.get_location().clone(),
+                expr.get_location().clone(),
             ));
         };
 
         let ast::Expression::Literal(Literal {
             literal_type: ast::LiteralType::Identifier(field_name),
             ..
-        }) = stmt.field.as_ref()
+        }) = expr.field.as_ref()
         else {
             panic!("Non identifier struct access lhs. Should be caught by binder");
         };
 
         match struct_fields.iter().find(|(_, name)| name == field_name) {
             Some((r#type, _)) => {
+                expr.set_type(r#type.clone());
                 self.current_type = Some(r#type.clone());
                 Ok(())
             }
             None => Err(TypeCheckerError::NoSuchField {
                 field_name: field_name.to_owned(),
                 struct_name: struct_name.to_owned(),
-                location: stmt.get_location().to_owned(),
+                location: expr.get_location().to_owned(),
             }),
         }
     }
