@@ -3,7 +3,7 @@ use super::{
     Type,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum Definition {
     Struct(*const StructStatement),
     LocalVariable(*const LetStatement),
@@ -48,7 +48,7 @@ macro_rules! impl_bindable {
                     if let Some(Definition::Struct(strct)) = self.definition {
                         unsafe { &(*strct) }
                     } else {
-                        panic!("Get struct def but was {:?}", self);
+                        panic!("Get struct def but was {:?}", self.definition);
                     }
                 }
 
@@ -56,7 +56,7 @@ macro_rules! impl_bindable {
                     if let Some(Definition::LocalVariable(var)) = self.definition {
                         unsafe { &(*var) }
                     } else {
-                        panic!("Get var def but was {:?}", self);
+                        panic!("Get var def but was {:?}", self.definition);
                     }
                 }
 
@@ -64,7 +64,7 @@ macro_rules! impl_bindable {
                     if let Some(Definition::Function(func)) = self.definition {
                         unsafe { &(*func) }
                     } else {
-                        panic!("Get fuc def but was {:?}", self);
+                        panic!("Get fuc def but was {:?}", self.definition);
                     }
                 }
             }

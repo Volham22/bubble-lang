@@ -270,14 +270,22 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
 
     fn visit_struct_access(&mut self, stmt: &'ast mut StructAccess) -> Result<(), BinderError> {
         self.visit_expression(&mut stmt.identifier)?;
-        let Expression::Literal(Literal {
-            literal_type: LiteralType::Identifier(struct_name),
-            ..
-        }) = stmt.identifier.as_ref()
-        else {
-            return Err(BinderError::NonIdentifierFieldAccess(
-                stmt.get_location().to_owned(),
-            ));
+        if let Expression::StructAccess(sa) = stmt.identifier.as_ref() {
+            stmt.set_definition(*sa.get_definition());
+            return Ok(());
+        }
+
+        let struct_name = match &stmt.identifier.as_ref() {
+            Expression::Literal(Literal {
+                literal_type: LiteralType::Identifier(struct_name),
+                ..
+            }) => struct_name,
+            // Expression::StructAccess(sa) => &sa.get_struct_def().name,
+            _ => {
+                return Err(BinderError::NonIdentifierFieldAccess(
+                    stmt.get_location().to_owned(),
+                ))
+            }
         };
 
         let strct = self.local_variables.find_symbol(struct_name).ok_or(

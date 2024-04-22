@@ -2,7 +2,7 @@ use inkwell::{
     builder::Builder,
     context::Context,
     module::{Linkage, Module},
-    types::{AnyTypeEnum, BasicMetadataTypeEnum, BasicType, BasicTypeEnum},
+    types::{AnyTypeEnum, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, StructType},
     values::{
         AnyValue, AnyValueEnum, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue,
     },
@@ -131,7 +131,7 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
             type_system::Type::U16 | type_system::Type::I16 => self.context.i16_type().into(),
             type_system::Type::U32 | type_system::Type::I32 => self.context.i32_type().into(),
             type_system::Type::U64 | type_system::Type::I64 => self.context.i64_type().into(),
-            type_system::Type::Int => unreachable!(),
+            type_system::Type::Int => panic!("Non infered int type in translator"),
             type_system::Type::Float => self.context.f64_type().into(),
             type_system::Type::String => self
                 .context
@@ -195,6 +195,23 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
             }
             type_system::Type::StructRef { .. } => todo!(),
         }
+    }
+
+    fn get_llvm_struct_type(
+        &self,
+        struct_init: &'ast ast::StructInitialization,
+    ) -> StructType<'ctx> {
+        let llvm_field_tys: Vec<BasicTypeEnum> = struct_init
+            .fields
+            .iter()
+            .map(|f| match f.init_expression.as_ref() {
+                // Nested struct init
+                Expression::StructInit(si) => self.get_llvm_struct_type(si).into(),
+                _ => self.as_basic_type(self.to_llvm_type(f.init_expression.get_type())),
+            })
+            .collect();
+
+        self.context.struct_type(&llvm_field_tys, false)
     }
 
     #[inline]
@@ -877,8 +894,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         &mut self,
         stmt: &'ast ast::StructInitialization,
     ) -> Result<(), Infallible> {
-        println!("init stmt: {:?}", stmt.get_type());
-        let llvm_ty = self.to_llvm_type(stmt.get_type()).into_struct_type();
+        let llvm_ty = self.get_llvm_struct_type(stmt);
         let mut init_values = Vec::with_capacity(stmt.fields.len());
 
         for value in &stmt.fields {
@@ -902,6 +918,16 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 .variables
                 .get(name.as_str())
                 .expect("undeclared variable"),
+            ast::Expression::StructAccess(sa) => {
+                self.should_load = false;
+                self.visit_struct_access(sa)?;
+                self.should_load = true;
+
+                self.current_value
+                    .as_ref()
+                    .expect("should have a value")
+                    .into_pointer_value()
+            }
             _ => {
                 self.visit_expression(&expr.identifier)?;
                 self.current_value
@@ -941,12 +967,14 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
             .expect("Failed to build struct gep");
 
         let field_llvm_ty = self.as_basic_type(self.to_llvm_type(expr.get_type()));
-        self.current_value = Some(
+        self.current_value = Some(if self.should_load {
             self.builder
                 .build_load(field_llvm_ty, struct_gep_pointer, "load_struct_gep")
                 .expect("Failed to build struct gep load")
-                .into(),
-        );
+                .into()
+        } else {
+            struct_gep_pointer.into()
+        });
 
         Ok(())
     }

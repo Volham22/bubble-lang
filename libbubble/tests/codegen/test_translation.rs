@@ -231,6 +231,52 @@ use crate::assets::build_and_link;
     "/tmp/struct_access_field",
     42
 )]
+#[case::nested_struct_declaration(
+    r#"
+    struct Other {
+        y: i32,
+        z: i32,
+    }
+
+    struct Point {
+        x: i32,
+        y: Other,
+    }
+
+    function main(): i32 {
+        let p: Point = struct {
+            x: 42,
+            y: struct { y: 27, z: 666 },
+        };
+
+        return 0;
+}"#,
+    "/tmp/nested_struct_declaration",
+    0
+)]
+#[case::nested_struct_access(
+    r#"
+    struct Other {
+        w: i32,
+        z: i32,
+    }
+
+    struct Point {
+        x: i32,
+        y: Other,
+    }
+
+    function main(): i32 {
+        let p: Point = struct {
+            x: 42,
+            y: struct { w: 51, z: 42 },
+        };
+
+        return p.y.z;
+}"#,
+    "/tmp/nested_struct_access",
+    42
+)]
 fn test_translation(
     #[case] code: &str,
     #[case] executable_path: &str,

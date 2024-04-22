@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use crate::ast::{
     self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Expression,
-    FunctionStatement, LetStatement, Literal, Null, StructAccess, StructInitialization,
+    FunctionStatement, LetStatement, Literal, Null, StructAccess, StructFieldInitializer,
     StructStatement,
 };
 
@@ -271,7 +271,7 @@ impl_typables!(
     Literal,
     Null,
     StructAccess,
-    StructInitialization,
+    StructFieldInitializer,
     StructStatement,
 );
 
@@ -284,10 +284,10 @@ impl Typable for Expression {
             Expression::Call(c) => c.get_type(),
             Expression::Assignment(a) => a.get_type(),
             Expression::ArrayInitializer(a) => a.get_type(),
-            Expression::AddrOf(_) => todo!(),
+            Expression::AddrOf(_) => unreachable!(),
             Expression::Deref(d) => d.get_type(),
-            Expression::StructInit(_) => todo!(),
-            Expression::StructAccess(_) => todo!(),
+            Expression::StructAccess(sa) => sa.get_type(),
+            _ => unreachable!("access type {:?}", self),
         }
     }
 

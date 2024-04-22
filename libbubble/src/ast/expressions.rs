@@ -80,7 +80,6 @@ impl StructFieldInitializer {
 pub struct StructInitialization {
     pub fields: Vec<StructFieldInitializer>,
     location: TokenLocation,
-    pub(crate) ty: Option<type_system::Type>,
 }
 
 impl StructInitialization {
@@ -88,7 +87,6 @@ impl StructInitialization {
         Self {
             fields,
             location: TokenLocation::new(tk_begin, tk_end),
-            ty: None,
         }
     }
 }

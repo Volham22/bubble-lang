@@ -134,6 +134,10 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
         let mut checker = SoundChecker::new(&stmt.name);
         checker.check(stmt)?;
 
+        for (ty, _) in stmt.fields.iter_mut() {
+            self.visit_type(ty)?;
+        }
+
         stmt.set_type(Type::Struct {
             name: stmt.name.clone(),
             fields: stmt
@@ -294,12 +298,12 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             self.current_type = Some(expr.get_function_def().return_type.clone().into());
             Ok(())
         } else {
-            Err(TypeCheckerError::NotCallable(expr.get_definition().clone()))
+            Err(TypeCheckerError::NotCallable(*expr.get_definition()))
         }
     }
 
     fn visit_type(&mut self, ty: &'ast mut crate::ast::Type) -> Result<(), TypeCheckerError> {
-        self.current_type = Some(ty.kind.clone().into());
+        self.current_type = Some(ty.clone().into());
         Ok(())
     }
 
@@ -394,7 +398,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             LiteralType::Identifier(_) => {
                 // FIXME: This is ugly and should not be written this way. We're
                 // cloning here to trick the borrow checker and do mutable accept
-                match literal.get_definition().clone() {
+                match *literal.get_definition() {
                     Definition::Struct(_) => {
                         let strct = literal.get_struct_def();
                         // self.visit_struct(strct)?;
@@ -543,6 +547,12 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
 
         for field in stmt.fields.iter_mut() {
             self.visit_expression(&mut field.init_expression)?;
+            field.set_type(
+                self.current_type
+                    .as_ref()
+                    .expect("Should have a type")
+                    .to_owned(),
+            );
             init_fields_type.push((
                 self.current_type
                     .as_ref()
@@ -552,10 +562,6 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             ));
         }
 
-        stmt.set_type(Type::Struct {
-            name: INIT_STRUCT_EXPRESSION.to_string(),
-            fields: init_fields_type.clone(),
-        });
         self.current_type = Some(Type::Struct {
             name: INIT_STRUCT_EXPRESSION.to_string(),
             fields: init_fields_type,
