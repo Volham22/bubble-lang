@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::ast::{Definition, OpType, TokenLocation};
+use crate::ast::{Definition, Locatable, OpType, TokenLocation};
 
 use super::Type;
 
@@ -67,12 +67,35 @@ pub enum TypeCheckerError {
     SelfReferentialStruct(TokenLocation, String),
     #[error("Field '{field_name}' is no present in struct '{struct_name}'")]
     NoSuchField {
+        location: TokenLocation,
         field_name: String,
         struct_name: String,
-        location: TokenLocation,
     },
     #[error("Left hand side of a field access is not a structure")]
     NonStructLhsAccess(TokenLocation),
+}
+
+impl Locatable for TypeCheckerError {
+    fn get_location(&self) -> &TokenLocation {
+        match self {
+            TypeCheckerError::BadInit { location, .. } => location,
+            TypeCheckerError::NonBoolCondition(location, _) => location,
+            TypeCheckerError::BadAssigment { location, .. } => location,
+            TypeCheckerError::NotCallable(location, _) => location,
+            TypeCheckerError::BadParameterCount { location, .. } => location,
+            TypeCheckerError::BadParameter { location, .. } => location,
+            TypeCheckerError::IncompatibleOperationType { location, .. } => location,
+            TypeCheckerError::ReturnTypeMismatch { location, .. } => location,
+            TypeCheckerError::InferenceError(location) => location,
+            TypeCheckerError::DifferentTypeInArrayInitializer { location, .. } => location,
+            TypeCheckerError::NonSubscriptable { location, .. } => location,
+            TypeCheckerError::IndexNotInteger { location, .. } => location,
+            TypeCheckerError::DerefNonPointer(location, ..) => location,
+            TypeCheckerError::SelfReferentialStruct(location, ..) => location,
+            TypeCheckerError::NoSuchField { location, .. } => location,
+            TypeCheckerError::NonStructLhsAccess(location) => location,
+        }
+    }
 }
 
 impl PartialEq for TypeCheckerError {
@@ -125,17 +148,17 @@ impl PartialEq for TypeCheckerError {
 
 #[derive(Error, Debug)]
 pub enum BinderError {
-    #[error("undeclared variable {name:?}")]
+    #[error("undeclared variable {name}")]
     UndeclaredVariable {
         location: TokenLocation,
         name: String,
     },
-    #[error("undeclared struct {name:?}")]
+    #[error("undeclared struct {name}")]
     UndeclaredStruct {
         location: TokenLocation,
         name: String,
     },
-    #[error("undeclared function {name:?}")]
+    #[error("undeclared function {name}")]
     UndeclaredFunction {
         location: TokenLocation,
         name: String,
@@ -150,4 +173,19 @@ pub enum BinderError {
     NotSubscriptable { location: TokenLocation },
     #[error("Access expression must be a field")]
     NonIdentifierFieldAccess(TokenLocation),
+}
+
+impl Locatable for BinderError {
+    fn get_location(&self) -> &TokenLocation {
+        match self {
+            BinderError::UndeclaredVariable { location, .. } => location,
+            BinderError::UndeclaredStruct { location, .. } => location,
+            BinderError::UndeclaredFunction { location, .. } => location,
+            BinderError::BadReturn { location } => location,
+            BinderError::BadBreak { location } => location,
+            BinderError::BadContinue { location } => location,
+            BinderError::NotSubscriptable { location } => location,
+            BinderError::NonIdentifierFieldAccess(location) => location,
+        }
+    }
 }
