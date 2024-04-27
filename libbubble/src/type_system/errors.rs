@@ -7,45 +7,64 @@ use super::Type;
 #[derive(Error, Debug)]
 pub enum TypeCheckerError {
     #[error("{left:?} cannot be initialized with {right:?}")]
-    BadInit { left: Type, right: Type },
-    #[error("condition should be of type bool but is {0:?}")]
-    NonBoolCondition(Type),
+    BadInit {
+        location: TokenLocation,
+        left: Type,
+        right: Type,
+    },
+    #[error("condition should be of type bool but is {1:?}")]
+    NonBoolCondition(TokenLocation, Type),
     #[error("{left:?} cannot be assigned to {right:?}")]
-    BadAssigment { left: Type, right: Type },
-    #[error("{0:?} is not callable")]
-    NotCallable(Definition),
+    BadAssigment {
+        location: TokenLocation,
+        left: Type,
+        right: Type,
+    },
+    #[error("{1:?} is not callable")]
+    NotCallable(TokenLocation, Definition),
     #[error("Expected {expected} parameters but got {got}")]
-    BadParameterCount { expected: u32, got: u32 },
+    BadParameterCount {
+        location: TokenLocation,
+        expected: u32,
+        got: u32,
+    },
     #[error("Expected type {expected_type:?} as parameter '{name}' but got {got:?}")]
     BadParameter {
+        location: TokenLocation,
         name: String,
         expected_type: Type,
         got: Type,
     },
     #[error("Cannot apply {operator:?} between {left_ty:?} and {right_ty:?}")]
     IncompatibleOperationType {
+        location: TokenLocation,
         operator: OpType,
         left_ty: Type,
         right_ty: Type,
     },
     #[error("Function return type is {expected:?} but a {got:?} type is returned")]
-    ReturnTypeMismatch { got: Type, expected: Type },
+    ReturnTypeMismatch {
+        location: TokenLocation,
+        got: Type,
+        expected: Type,
+    },
     #[error("Can't infer a proper type to the variable. Please, add a type annotation")]
     InferenceError(TokenLocation),
     #[error("Different type in array initializer. Fisrt type is: {first:?} but found {found:?} at position {position}")]
     DifferentTypeInArrayInitializer {
+        location: TokenLocation,
         first: Type,
         found: Type,
         position: u32,
     },
     #[error("Type {ty:?} is not subscriptable")]
-    NonSubscriptable { ty: Type },
+    NonSubscriptable { location: TokenLocation, ty: Type },
     #[error("Index type is not integer like. Got: {got:?}")]
-    IndexNotInteger { got: Type },
+    IndexNotInteger { location: TokenLocation, got: Type },
     #[error("Deref a non pointer type: {0:?}.")]
-    DerefNonPointer(Type),
-    #[error("{0:}: Self referential struct are not allowed.")]
-    SelfReferentialStruct(String),
+    DerefNonPointer(TokenLocation, Type),
+    #[error("{1:}: Self referential struct are not allowed.")]
+    SelfReferentialStruct(TokenLocation, String),
     #[error("Field '{field_name}' is no present in struct '{struct_name}'")]
     NoSuchField {
         field_name: String,
@@ -61,20 +80,20 @@ impl PartialEq for TypeCheckerError {
         matches!(
             (self, other),
             (
-                TypeCheckerError::DerefNonPointer(_),
-                TypeCheckerError::DerefNonPointer(_),
+                TypeCheckerError::DerefNonPointer(..),
+                TypeCheckerError::DerefNonPointer(..),
             ) | (
                 TypeCheckerError::BadInit { .. },
                 TypeCheckerError::BadInit { .. }
             ) | (
-                TypeCheckerError::NonBoolCondition(_),
-                TypeCheckerError::NonBoolCondition(_)
+                TypeCheckerError::NonBoolCondition(..),
+                TypeCheckerError::NonBoolCondition(..)
             ) | (
                 TypeCheckerError::BadAssigment { .. },
                 TypeCheckerError::BadAssigment { .. }
             ) | (
-                TypeCheckerError::NotCallable(_),
-                TypeCheckerError::NotCallable(_)
+                TypeCheckerError::NotCallable(..),
+                TypeCheckerError::NotCallable(..)
             ) | (
                 TypeCheckerError::BadParameterCount { .. },
                 TypeCheckerError::BadParameterCount { .. },
@@ -97,8 +116,8 @@ impl PartialEq for TypeCheckerError {
                 TypeCheckerError::NonSubscriptable { .. },
                 TypeCheckerError::NonSubscriptable { .. },
             ) | (
-                TypeCheckerError::SelfReferentialStruct(_),
-                TypeCheckerError::SelfReferentialStruct(_),
+                TypeCheckerError::SelfReferentialStruct(..),
+                TypeCheckerError::SelfReferentialStruct(..),
             )
         )
     }

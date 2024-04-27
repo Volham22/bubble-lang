@@ -26,6 +26,23 @@ impl Expression {
     }
 }
 
+impl Locatable for Expression {
+    fn get_location(&self) -> &TokenLocation {
+        match self {
+            Expression::Group(g) => g.get_location(),
+            Expression::BinaryOperation(bo) => bo.get_location(),
+            Expression::Literal(l) => l.get_location(),
+            Expression::Call(c) => c.get_location(),
+            Expression::Assignment(a) => a.get_location(),
+            Expression::ArrayInitializer(aa) => aa.get_location(),
+            Expression::AddrOf(ao) => ao.get_location(),
+            Expression::Deref(dr) => dr.get_location(),
+            Expression::StructInit(si) => si.get_location(),
+            Expression::StructAccess(sa) => sa.get_location(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct StructAccess {
     pub identifier: Box<Expression>,

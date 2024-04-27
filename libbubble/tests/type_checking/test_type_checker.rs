@@ -469,6 +469,7 @@ fn type_checker_valid(#[case] code: &str) {
 
 #[rstest]
 #[case::bad_binary_operation_type(r#"function f(): i32 { return 2 * false; }"#, TypeCheckerError::IncompatibleOperationType {
+    location: ast::TokenLocation::new(0, 0),
     operator: ast::OpType::Multiply,
     left_ty: type_system::Type::Int,
     right_ty: type_system::Type::Bool})]
@@ -476,26 +477,43 @@ fn type_checker_valid(#[case] code: &str) {
        function f() {
            let a: bool = 32;
        }
-       "#, TypeCheckerError::BadInit { left: type_system::Type::Bool, right: type_system::Type::Bool })]
+       "#,
+       TypeCheckerError::BadInit {
+           location: ast::TokenLocation::new(0, 0),
+           left: type_system::Type::Bool,
+           right: type_system::Type::Bool
+       })]
 #[case::bad_local_variable_assignment(r#"
-       function f() {
-           let a: bool = false;
-           a = 42;
-       }
-       "#, TypeCheckerError::BadAssigment { left: type_system::Type::Bool, right: type_system::Type::Bool } )]
+   function f() {
+       let a: bool = false;
+       a = 42;
+   }
+   "#,
+   TypeCheckerError::BadAssigment {
+       location: ast::TokenLocation::new(0, 0),
+       left: type_system::Type::Bool,
+       right: type_system::Type::Bool
+   }
+)]
 #[case::bad_local_variable_assignment_type_inference(r#"
-       function f() {
-           let a = false;
-           a = 42;
-       }
-       "#, TypeCheckerError::BadAssigment { left: type_system::Type::Bool, right: type_system::Type::Bool } )]
+   function f() {
+       let a = false;
+       a = 42;
+   }
+   "#,
+   TypeCheckerError::BadAssigment {
+       location: ast::TokenLocation::new(0, 0),
+       left: type_system::Type::Bool,
+       right: type_system::Type::Bool
+   }
+)]
 #[case::condition_not_bool_while(
     r#"
        function f() {
            while 32.0 { 42 }
        }
    "#,
-    TypeCheckerError::NonBoolCondition(type_system::Type::Float)
+    TypeCheckerError::NonBoolCondition(ast::TokenLocation::new(0, 0), type_system::Type::Float)
 )]
 #[case::extern_function_declaration_call_bad_args(
     r#"
@@ -506,7 +524,11 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }
     "#,
-    TypeCheckerError::BadParameterCount { expected: 1, got: 0 }
+    TypeCheckerError::BadParameterCount {
+        location: ast::TokenLocation::new(0, 0),
+        expected: 1,
+        got: 0 ,
+    }
 )]
 #[case::condition_not_bool_if(
     r#"
@@ -514,7 +536,7 @@ fn type_checker_valid(#[case] code: &str) {
            if 32.4 { 32 }
        }
    "#,
-    TypeCheckerError::NonBoolCondition(type_system::Type::Float)
+    TypeCheckerError::NonBoolCondition(ast::TokenLocation::new(0, 0), type_system::Type::Float)
 )]
 #[case::condition_not_bool_if_else(
     r#"
@@ -522,7 +544,7 @@ fn type_checker_valid(#[case] code: &str) {
            if 32.4 { 32 } else { 51 }
        }
    "#,
-    TypeCheckerError::NonBoolCondition(type_system::Type::Float)
+    TypeCheckerError::NonBoolCondition(ast::TokenLocation::new(0, 0), type_system::Type::Float)
 )]
 #[case::condition_not_bool_for_continue_expr(
     r#"
@@ -530,7 +552,7 @@ fn type_checker_valid(#[case] code: &str) {
            for i = 0; 32.0; i = i + 1 { 32 }
        }
    "#,
-    TypeCheckerError::NonBoolCondition(type_system::Type::Float)
+    TypeCheckerError::NonBoolCondition(ast::TokenLocation::new(0, 0), type_system::Type::Float)
 )]
 #[case::bad_parameters_missing_args(
     r#"
@@ -539,7 +561,11 @@ fn type_checker_valid(#[case] code: &str) {
             g();
        }
    "#,
-    TypeCheckerError::BadParameterCount { expected: 0, got: 0 }
+    TypeCheckerError::BadParameterCount {
+        location: ast::TokenLocation::new(0, 0),
+        expected: 0,
+        got: 0
+    }
 )]
 #[case::bad_parameters_too_few_args(
     r#"
@@ -548,7 +574,11 @@ fn type_checker_valid(#[case] code: &str) {
             g(2);
        }
    "#,
-    TypeCheckerError::BadParameterCount { expected: 0, got: 0 }
+    TypeCheckerError::BadParameterCount {
+        location: ast::TokenLocation::new(0, 0),
+        expected: 0,
+        got: 0
+    }
 )]
 #[case::bad_parameters_arg_types_mismatch(
     r#"
@@ -558,6 +588,7 @@ fn type_checker_valid(#[case] code: &str) {
        }
    "#,
     TypeCheckerError::BadParameter {
+        location: ast::TokenLocation::new(0, 0),
         name: "".to_string(),
         expected_type: type_system::Type::U32,
         got: type_system::Type::Bool
@@ -570,6 +601,7 @@ fn type_checker_valid(#[case] code: &str) {
        }
    "#,
     TypeCheckerError::IncompatibleOperationType {
+        location: ast::TokenLocation::new(0, 0),
         operator: ast::OpType::Plus,
         left_ty: type_system::Type::I32,
         right_ty: type_system::Type::Bool
@@ -581,7 +613,11 @@ fn type_checker_valid(#[case] code: &str) {
            return 42;
        }
    "#,
-    TypeCheckerError::ReturnTypeMismatch { got: type_system::Type::Int, expected: type_system::Type::Void }
+    TypeCheckerError::ReturnTypeMismatch {
+        location: ast::TokenLocation::new(0, 0),
+        got: type_system::Type::Int,
+        expected: type_system::Type::Void
+    }
 )]
 #[case::wrong_int_type_return(
     r#"
@@ -590,7 +626,11 @@ fn type_checker_valid(#[case] code: &str) {
            return a;
        }
    "#,
-    TypeCheckerError::ReturnTypeMismatch { got: type_system::Type::U32, expected: type_system::Type::I32 }
+    TypeCheckerError::ReturnTypeMismatch {
+        location: ast::TokenLocation::new(0, 0),
+        got: type_system::Type::U32,
+        expected: type_system::Type::I32
+    }
 )]
 #[case::return_type_mismatch(
     r#"
@@ -598,7 +638,11 @@ fn type_checker_valid(#[case] code: &str) {
            return 42;
        }
    "#,
-    TypeCheckerError::ReturnTypeMismatch { got: type_system::Type::Int, expected: type_system::Type::Float }
+    TypeCheckerError::ReturnTypeMismatch {
+        location: ast::TokenLocation::new(0, 0),
+        got: type_system::Type::Int,
+        expected: type_system::Type::Float
+    }
 )]
 #[case::let_string_type_hint_bad_init(
     r#"
@@ -606,7 +650,11 @@ fn type_checker_valid(#[case] code: &str) {
            let s: string = 32;
        }
    "#,
-    TypeCheckerError::BadInit { left: type_system::Type::String, right: type_system::Type::Int }
+    TypeCheckerError::BadInit {
+        location: ast::TokenLocation::new(0, 0),
+        left: type_system::Type::String,
+        right: type_system::Type::Int
+    }
 )]
 #[case::string_bad_type_assign(
     r#"
@@ -615,7 +663,11 @@ fn type_checker_valid(#[case] code: &str) {
            s = 32;
        }
    "#,
-    TypeCheckerError::BadAssigment { left: type_system::Type::String, right: type_system::Type::Int }
+    TypeCheckerError::BadAssigment {
+        location: ast::TokenLocation::new(0, 0),
+        left: type_system::Type::String,
+        right: type_system::Type::Int
+    }
 )]
 #[case::bad_return_type_string(
     r#"
@@ -623,7 +675,11 @@ fn type_checker_valid(#[case] code: &str) {
            return "hello";
        }
    "#,
-    TypeCheckerError::ReturnTypeMismatch { got: type_system::Type::String, expected: type_system::Type::I32 }
+    TypeCheckerError::ReturnTypeMismatch {
+        location: ast::TokenLocation::new(0, 0),
+        got: type_system::Type::String,
+        expected: type_system::Type::I32
+    }
 )]
 #[case::for_int_inference_without_hint(
     r#"
@@ -643,6 +699,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadInit {
+        location: ast::TokenLocation::new(0, 0),
         left: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
         right: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::U32) }
     },
@@ -653,7 +710,12 @@ fn type_checker_valid(#[case] code: &str) {
         let arr: [3; u32] = [1, false, 3];
         return 0;
     }"#,
-    TypeCheckerError::DifferentTypeInArrayInitializer { first: type_system::Type::U32, found: type_system::Type::Bool, position: 1 },
+    TypeCheckerError::DifferentTypeInArrayInitializer {
+        location: ast::TokenLocation::new(0, 0),
+        first: type_system::Type::U32,
+        found: type_system::Type::Bool,
+        position: 1
+    },
 )]
 #[case::wrong_type_array_init(
     r#"
@@ -661,13 +723,17 @@ fn type_checker_valid(#[case] code: &str) {
         let arr: [3; u32] = [true, true, true];
         return 0;
     }"#,
-    TypeCheckerError::BadInit { left: type_system::Type::Array {
-        size: 3,
-        array_type: Box::new(type_system::Type::U32),
-    }, right: type_system::Type::Array {
-        size: 3,
-        array_type: Box::new(type_system::Type::Bool),
-    } },
+    TypeCheckerError::BadInit {
+        location: ast::TokenLocation::new(0, 0),
+        left: type_system::Type::Array {
+            size: 3,
+            array_type: Box::new(type_system::Type::U32),
+        },
+        right: type_system::Type::Array {
+            size: 3,
+            array_type: Box::new(type_system::Type::Bool),
+        }
+    },
 )]
 #[case::inference_error_int_type_array_init(
     r#"
@@ -684,7 +750,10 @@ fn type_checker_valid(#[case] code: &str) {
         a[0];
         return 0;
     }"#,
-    TypeCheckerError::NonSubscriptable{ ty: type_system::Type::I32 },
+    TypeCheckerError::NonSubscriptable {
+        location: ast::TokenLocation::new(0, 0),
+        ty: type_system::Type::I32
+    },
 )]
 #[case::array_access_non_subscriptable_type_function_return(
     r#"
@@ -693,7 +762,10 @@ fn type_checker_valid(#[case] code: &str) {
         f()[0];
         return 0;
     }"#,
-    TypeCheckerError::NonSubscriptable{ ty: type_system::Type::I32 },
+    TypeCheckerError::NonSubscriptable {
+        location: ast::TokenLocation::new(0, 0),
+        ty: type_system::Type::I32
+    },
 )]
 #[case::array_as_function_parameter_wrong_type(
     r#"
@@ -706,6 +778,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadParameter {
+        location: ast::TokenLocation::new(0, 0),
         name: "arr".to_string(),
         expected_type: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
         got: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::Bool) } }
@@ -721,6 +794,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadParameter {
+        location: ast::TokenLocation::new(0, 0),
         name: "arr".to_string(),
         expected_type: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::U32) },
         got: type_system::Type::Array { size: 4, array_type: Box::new(type_system::Type::Bool) } }
@@ -733,6 +807,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadAssigment {
+        location: ast::TokenLocation::new(0, 0),
         left: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::Bool)},
         right: type_system::Type::Array { size: 3, array_type: Box::new(type_system::Type::U32)},
     }
@@ -743,7 +818,11 @@ fn type_checker_valid(#[case] code: &str) {
         let arr: i32 = null;
         return 0;
     }"#,
-    TypeCheckerError::BadInit { left: type_system::Type::I32, right: type_system::Type::Null { concrete_type: None } },
+    TypeCheckerError::BadInit {
+        location: ast::TokenLocation::new(0, 0),
+        left: type_system::Type::I32,
+        right: type_system::Type::Null { concrete_type: None }
+    },
 )]
 #[case::function_return_pointer_wrong_type(
     r#"
@@ -756,6 +835,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::ReturnTypeMismatch {
+        location: ast::TokenLocation::new(0, 0),
         got: type_system::Type::I32,
         expected: type_system::Type::Ptr(Box::new(type_system::Type::I32))
     } ,
@@ -768,6 +848,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadInit {
+        location: ast::TokenLocation::new(0, 0),
         left: type_system::Type::I32,
         right: type_system::Type::Ptr(Box::new(type_system::Type::I32))
     } ,
@@ -783,6 +864,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadParameter {
+        location: ast::TokenLocation::new(0, 0),
         name: "x".to_string(),
         expected_type: type_system::Type::Ptr(Box::new(type_system::Type::Bool)),
         got: type_system::Type::Ptr(Box::new(type_system::Type::I32)),
@@ -795,6 +877,7 @@ fn type_checker_valid(#[case] code: &str) {
         return addrof x;
     }"#,
     TypeCheckerError::ReturnTypeMismatch {
+        location: ast::TokenLocation::new(0, 0),
         got: type_system::Type::Ptr(Box::new(type_system::Type::I32)),
         expected: type_system::Type::I32,
     },
@@ -806,7 +889,7 @@ fn type_checker_valid(#[case] code: &str) {
         deref x;
         return 0;
     }"#,
-    TypeCheckerError::DerefNonPointer(type_system::Type::I32)
+    TypeCheckerError::DerefNonPointer(ast::TokenLocation::new(0, 0), type_system::Type::I32)
 )]
 #[case::init_struct_missing_field(
     r#"
@@ -823,6 +906,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadInit {
+        location: ast::TokenLocation::new(0, 0),
         left: type_system::Type::Struct {
             name: "Point".to_string(),
             fields: vec![
@@ -851,6 +935,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadInit {
+        location: ast::TokenLocation::new(0, 0),
         left: type_system::Type::Struct {
             name: "Point".to_string(),
             fields: vec![
@@ -876,6 +961,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadInit {
+        location: ast::TokenLocation::new(0, 0),
         left: type_system::Type::Struct {
             name: "Point".to_string(),
             fields: vec![
@@ -912,6 +998,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     TypeCheckerError::BadInit {
+        location: ast::TokenLocation::new(0, 0),
         left: type_system::Type::Struct {
             name: "Point".to_string(),
             fields: vec![
@@ -950,6 +1037,7 @@ fn type_checker_valid(#[case] code: &str) {
         return 0;
     }"#,
     type_system::TypeCheckerError::ReturnTypeMismatch {
+        location: ast::TokenLocation::new(0, 0),
         got: type_system::Type::Struct {
             name: "<struct initialization expression>".to_string(),
             fields: vec![
@@ -976,7 +1064,7 @@ fn type_checker_valid(#[case] code: &str) {
     function f(): i32 {
         return 0;
     }"#,
-    TypeCheckerError::SelfReferentialStruct("Point".to_string())
+    TypeCheckerError::SelfReferentialStruct(ast::TokenLocation::new(0, 0), "Point".to_string())
 )]
 fn type_checker_invalid(#[case] code: &str, #[case] expected_error: TypeCheckerError) {
     let result = run_type_checker(code);
