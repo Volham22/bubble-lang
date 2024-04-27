@@ -67,16 +67,17 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
             self.write(&param_stmt.name)?;
             self.write(":")?;
             self.visit_type_kind(
-                param_stmt
+                &param_stmt
                     .declaration_type
                     .as_ref()
-                    .expect("Function parameter has no type hint!"),
+                    .expect("Function parameter has no type hint!")
+                    .kind,
             )?;
             self.write(", ")?;
         }
         self.write("): ")?;
 
-        self.visit_type_kind(&stmt.return_type)?;
+        self.visit_type(&stmt.return_type)?;
         self.write(" {")?;
         self.indent_and_newline()?;
 
@@ -94,9 +95,9 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         self.write(&format!("struct {} {{", stmt.name))?;
         self.indent_and_newline()?;
 
-        for (kind, name) in &stmt.fields {
+        for (ty, name) in &stmt.fields {
             self.write(&format!("{}: ", name))?;
-            self.visit_type_kind(kind)?;
+            self.visit_type_kind(&ty.kind)?;
             self.write(",\n")?;
         }
 
@@ -109,7 +110,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         self.write(&stmt.name)?;
 
         if let Some(ref ty) = stmt.declaration_type {
-            self.visit_type_kind(ty)?;
+            self.visit_type_kind(&ty.kind)?;
         }
 
         self.write(" = ")?;
@@ -158,7 +159,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
 
         if let Some(ref ty) = stmt.init_decl.declaration_type {
             self.write(": ")?;
-            self.visit_type_kind(ty)?;
+            self.visit_type_kind(&ty.kind)?;
         }
 
         self.write(" = ")?;

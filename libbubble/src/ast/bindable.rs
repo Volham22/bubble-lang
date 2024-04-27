@@ -1,6 +1,9 @@
-use super::{ArrayAccess, Call, FunctionStatement, LetStatement, Literal, StructStatement, Type};
+use super::{
+    ArrayAccess, Call, FunctionStatement, LetStatement, Literal, StructAccess, StructStatement,
+    Type,
+};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum Definition {
     Struct(*const StructStatement),
     LocalVariable(*const LetStatement),
@@ -30,44 +33,42 @@ pub trait Bindable {
 }
 
 macro_rules! impl_bindable {
-    ($type:ty) => {
-        impl Bindable for $type {
-            fn get_definition(&self) -> &Definition {
-                self.definition.as_ref().expect("unbound")
-            }
+    ($( $type:ty ),*) => {
+        $(
+            impl Bindable for $type {
+                fn get_definition(&self) -> &Definition {
+                    self.definition.as_ref().expect("unbound")
+                }
 
-            fn set_definition(&mut self, definition: Definition) {
-                self.definition = Some(definition);
-            }
+                fn set_definition(&mut self, definition: Definition) {
+                    self.definition = Some(definition);
+                }
 
-            fn get_struct_def(&self) -> &StructStatement {
-                if let Some(Definition::Struct(strct)) = self.definition {
-                    unsafe { &(*strct) }
-                } else {
-                    panic!("Get struct def but was {:?}", self);
+                fn get_struct_def(&self) -> &StructStatement {
+                    if let Some(Definition::Struct(strct)) = self.definition {
+                        unsafe { &(*strct) }
+                    } else {
+                        panic!("Get struct def but was {:?}", self.definition);
+                    }
+                }
+
+                fn get_local_variable_def(&self) -> &LetStatement {
+                    if let Some(Definition::LocalVariable(var)) = self.definition {
+                        unsafe { &(*var) }
+                    } else {
+                        panic!("Get var def but was {:?}", self.definition);
+                    }
+                }
+
+                fn get_function_def(&self) -> &FunctionStatement {
+                    if let Some(Definition::Function(func)) = self.definition {
+                        unsafe { &(*func) }
+                    } else {
+                        panic!("Get fuc def but was {:?}", self.definition);
+                    }
                 }
             }
-
-            fn get_local_variable_def(&self) -> &LetStatement {
-                if let Some(Definition::LocalVariable(var)) = self.definition {
-                    unsafe { &(*var) }
-                } else {
-                    panic!("Get var def but was {:?}", self);
-                }
-            }
-
-            fn get_function_def(&self) -> &FunctionStatement {
-                if let Some(Definition::Function(func)) = self.definition {
-                    unsafe { &(*func) }
-                } else {
-                    panic!("Get fuc def but was {:?}", self);
-                }
-            }
-        }
+        )*
     };
 }
-
-impl_bindable!(Literal);
-impl_bindable!(ArrayAccess);
-impl_bindable!(Call);
-impl_bindable!(Type);
+impl_bindable!(ArrayAccess, Call, Type, Literal, StructAccess);

@@ -47,4 +47,20 @@ pub enum TypeKind {
     Null { concrete_type: Box<TypeKind> },
 }
 
+impl TypeKind {
+    pub fn is_integer(&self) -> bool {
+        matches!(
+            self,
+            TypeKind::U8
+                | TypeKind::U16
+                | TypeKind::U32
+                | TypeKind::U64
+                | TypeKind::I8
+                | TypeKind::I16
+                | TypeKind::I32
+                | TypeKind::I64
+        )
+    }
+}
+
 impl_locatable!(Type);

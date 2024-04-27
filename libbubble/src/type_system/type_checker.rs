@@ -8,8 +8,8 @@ use crate::ast::{
 };
 
 use super::{
-    errors::TypeCheckerError, inference::IntegerInference, type_setter::ExpressionTypeSetter,
-    Typable, Type,
+    errors::TypeCheckerError, inference::IntegerInference, sound::SoundChecker,
+    type_setter::ExpressionTypeSetter, Typable, Type,
 };
 
 pub fn run_type_checker(stmts: &mut [GlobalStatement]) -> Result<(), TypeCheckerError> {
@@ -22,6 +22,8 @@ pub fn run_type_checker(stmts: &mut [GlobalStatement]) -> Result<(), TypeChecker
     // type_checker.check_statements(stmts)
     Ok(())
 }
+
+const INIT_STRUCT_EXPRESSION: &str = "<struct init expression>";
 
 #[derive(Default)]
 pub struct TypeChecker {
@@ -73,7 +75,8 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 parameter
                     .declaration_type
                     .clone()
-                    .expect("Parameter has no type hint!"),
+                    .expect("Parameter has no type hint!")
+                    .kind,
             ))
         }
 
@@ -128,12 +131,19 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
     }
 
     fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), TypeCheckerError> {
+        let mut checker = SoundChecker::new(&stmt.name);
+        checker.check(stmt)?;
+
+        for (ty, _) in stmt.fields.iter_mut() {
+            self.visit_type(ty)?;
+        }
+
         stmt.set_type(Type::Struct {
             name: stmt.name.clone(),
             fields: stmt
                 .fields
                 .iter()
-                .map(|(kind, name)| (Type::from(kind.clone()), name.clone()))
+                .map(|(ty, name)| (Type::from(ty.to_owned()), name.to_owned()))
                 .collect(),
         });
 
@@ -288,12 +298,12 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             self.current_type = Some(expr.get_function_def().return_type.clone().into());
             Ok(())
         } else {
-            Err(TypeCheckerError::NotCallable(expr.get_definition().clone()))
+            Err(TypeCheckerError::NotCallable(*expr.get_definition()))
         }
     }
 
     fn visit_type(&mut self, ty: &'ast mut crate::ast::Type) -> Result<(), TypeCheckerError> {
-        self.current_type = Some(ty.kind.clone().into());
+        self.current_type = Some(ty.clone().into());
         Ok(())
     }
 
@@ -388,7 +398,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             LiteralType::Identifier(_) => {
                 // FIXME: This is ugly and should not be written this way. We're
                 // cloning here to trick the borrow checker and do mutable accept
-                match literal.get_definition().clone() {
+                match *literal.get_definition() {
                     Definition::Struct(_) => {
                         let strct = literal.get_struct_def();
                         // self.visit_struct(strct)?;
@@ -526,6 +536,73 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             _ => Err(TypeCheckerError::DerefNonPointer(
                 self.current_type.clone().unwrap(),
             )),
+        }
+    }
+
+    fn visit_struct_init(
+        &mut self,
+        stmt: &'ast mut ast::StructInitialization,
+    ) -> Result<(), TypeCheckerError> {
+        let mut init_fields_type = Vec::with_capacity(stmt.fields.len());
+
+        for field in stmt.fields.iter_mut() {
+            self.visit_expression(&mut field.init_expression)?;
+            field.set_type(
+                self.current_type
+                    .as_ref()
+                    .expect("Should have a type")
+                    .to_owned(),
+            );
+            init_fields_type.push((
+                self.current_type
+                    .as_ref()
+                    .expect("Should have a type")
+                    .to_owned(),
+                field.name.to_owned(),
+            ));
+        }
+
+        self.current_type = Some(Type::Struct {
+            name: INIT_STRUCT_EXPRESSION.to_string(),
+            fields: init_fields_type,
+        });
+        Ok(())
+    }
+
+    fn visit_struct_access(
+        &mut self,
+        expr: &'ast mut ast::StructAccess,
+    ) -> Result<(), TypeCheckerError> {
+        self.visit_expression(&mut expr.identifier)?;
+        let Type::Struct {
+            name: struct_name,
+            fields: struct_fields,
+        } = self.current_type.as_ref().expect("Should have a type")
+        else {
+            return Err(TypeCheckerError::NonStructLhsAccess(
+                expr.get_location().clone(),
+            ));
+        };
+
+        let ast::Expression::Literal(Literal {
+            literal_type: ast::LiteralType::Identifier(field_name),
+            ..
+        }) = expr.field.as_ref()
+        else {
+            panic!("Non identifier struct access lhs. Should be caught by binder");
+        };
+
+        match struct_fields.iter().find(|(_, name)| name == field_name) {
+            Some((r#type, _)) => {
+                expr.set_type(r#type.clone());
+                self.current_type = Some(r#type.clone());
+                Ok(())
+            }
+            None => Err(TypeCheckerError::NoSuchField {
+                field_name: field_name.to_owned(),
+                struct_name: struct_name.to_owned(),
+                location: expr.get_location().to_owned(),
+            }),
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use crate::ast::*;
+use crate::ast::{self, *};
 
 use super::{errors::TypeCheckerError, Typable, Type};
 
@@ -89,6 +89,51 @@ impl IntegerInference {
 
         Ok(())
     }
+
+    fn infer_struct_recursively(init_exp: &mut StructInitialization, struct_decl: &Type) {
+        // Recurse for struct fields
+        for field in init_exp
+            .fields
+            .iter_mut()
+            .filter(|f| matches!(f.init_expression.as_ref(), Expression::StructInit(_)))
+        {
+            let Type::Struct {
+                fields: real_type, ..
+            } = struct_decl
+            else {
+                unreachable!()
+            };
+            let ast::Expression::StructInit(struct_init_expr) = field.init_expression.as_mut()
+            else {
+                unreachable!();
+            };
+
+            Self::infer_struct_recursively(
+                struct_init_expr,
+                real_type
+                    .iter()
+                    .find(|(_, name)| name == &field.name)
+                    .map(|(ty, _)| ty)
+                    .expect("Field not present in struct declaration"),
+            );
+        }
+
+        let Type::Struct {
+            fields: fields_ty, ..
+        } = struct_decl
+        else {
+            panic!("Expected struct type but got: {struct_decl:?}");
+        };
+
+        for (i, init) in init_exp.fields.iter_mut().enumerate().filter(|(_, f)| {
+            !matches!(f.init_expression.as_ref(), Expression::StructInit(_))
+                && f.init_expression.get_type().is_integer()
+        }) {
+            let (real_ty, _) = fields_ty.get(i).expect("Type mismatch");
+            let mut setter = ExpressionTypeSetter::new(real_ty);
+            setter.set_type_recusively(&mut init.init_expression);
+        }
+    }
 }
 
 /// This visitor is here to infer proper integer types to literal expressions
@@ -130,7 +175,31 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
         )?;
 
         if self.is_int {
-            match stmt.declaration_type {
+            match stmt.declaration_type.as_ref() {
+                // Struct case
+                Some(ast::Type {
+                    kind: ast::TypeKind::Identifier(_),
+                    definition: Some(_),
+                    ..
+                }) => {
+                    let ast::Expression::StructInit(init_exp) = stmt
+                        .init_exp
+                        .as_mut()
+                        .expect("Init expression must be present")
+                        .as_mut()
+                    else {
+                        panic!("Struct intialized with a non struct init type");
+                    };
+
+                    Self::infer_struct_recursively(
+                        init_exp,
+                        stmt.declaration_type
+                            .as_ref()
+                            .unwrap()
+                            .get_struct_def()
+                            .get_type(),
+                    );
+                }
                 Some(_) => {
                     let statement_ty = match stmt.get_type() {
                         // If it's an array we need to set inner expression type to the base type
@@ -143,16 +212,16 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
                             .as_mut()
                             .expect("Let statement has no init exp"),
                     );
-
-                    Ok(())
                 }
-                None => Err(TypeCheckerError::InferenceError(
-                    stmt.get_location().clone(),
-                )),
-            }
-        } else {
-            Ok(())
+                None => {
+                    return Err(TypeCheckerError::InferenceError(
+                        stmt.get_location().clone(),
+                    ))
+                }
+            };
         }
+
+        Ok(())
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), TypeCheckerError> {
@@ -189,7 +258,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
 
             Ok(())
         } else {
-            Err(TypeCheckerError::NotCallable(expr.get_definition().clone()))
+            Err(TypeCheckerError::NotCallable(*expr.get_definition()))
         }
     }
 

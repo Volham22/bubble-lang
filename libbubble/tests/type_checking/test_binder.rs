@@ -99,6 +99,28 @@ use crate::assets::parse_global_statements_input;
        }
    "#
 )]
+#[case::nested_struct_access(
+    r#"
+    struct Other {
+        y: i32,
+        z: i32,
+    }
+
+    struct Point {
+        x: i32,
+        y: Other,
+    }
+
+    function main(): i32 {
+        let p: Point = struct {
+            x: 42,
+            y: struct { y: 51, z: 42 },
+        };
+
+        p.y.z;
+        return 0;
+}"#
+)]
 fn test_binding_good(#[case] code: &str) {
     let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
     let mut binder = binder::Binder::default();

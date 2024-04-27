@@ -67,6 +67,8 @@ pub enum Token {
     Colon,
     #[token("=")]
     Equal,
+    #[token(".")]
+    Dot,
 
     // Operators
     #[token("+")]

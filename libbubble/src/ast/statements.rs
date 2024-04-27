@@ -4,7 +4,6 @@ use super::{
     expressions::Expression,
     impl_locatable,
     location::{Locatable, TokenLocation},
-    TypeKind,
 };
 
 #[derive(Debug, Clone)]
@@ -14,13 +13,13 @@ pub enum GlobalStatement {
     Let(LetStatement),
 }
 
-pub type FunctionParameter = (TypeKind, String);
+pub type FunctionParameter = (crate::ast::Type, String);
 
 #[derive(Debug, Clone)]
 pub struct FunctionStatement {
     pub name: String,
     pub parameters: Vec<LetStatement>,
-    pub return_type: TypeKind,
+    pub return_type: crate::ast::Type,
     pub is_extern: bool,
     pub body: Option<Statements>,
     pub(crate) location: TokenLocation,
@@ -33,17 +32,15 @@ impl FunctionStatement {
         tk_end: usize,
         name: String,
         parameters: Vec<FunctionParameter>,
-        return_type: TypeKind,
+        return_type: crate::ast::Type,
         is_extern: bool,
         body: Option<Statements>,
     ) -> Self {
         Self {
             name,
             parameters: parameters
-                .iter()
-                .map(|(kind, name)| {
-                    LetStatement::new(tk_begin, tk_end, name.to_string(), Some(kind.clone()), None)
-                })
+                .into_iter()
+                .map(|(kind, name)| LetStatement::new(tk_begin, tk_end, name, Some(kind), None))
                 .collect(),
             return_type,
             is_extern,
@@ -57,7 +54,7 @@ impl FunctionStatement {
 #[derive(Debug, Clone)]
 pub struct LetStatement {
     pub name: String,
-    pub declaration_type: Option<TypeKind>,
+    pub declaration_type: Option<crate::ast::Type>,
     pub init_exp: Option<Box<Expression>>,
     location: TokenLocation,
     pub(crate) ty: Option<type_system::Type>,
@@ -68,7 +65,7 @@ impl LetStatement {
         tk_begin: usize,
         tk_end: usize,
         name: String,
-        declaration_type: Option<TypeKind>,
+        declaration_type: Option<crate::ast::Type>,
         init_exp: Option<Box<Expression>>,
     ) -> Self {
         Self {

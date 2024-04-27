@@ -1,9 +1,12 @@
 use std::ops::Deref;
 
 use crate::ast::{
-    self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Call, Expression,
-    FunctionStatement, LetStatement, Literal, Null, StructStatement,
+    self, ArrayAccess, ArrayInitializer, Assignment, BinaryOperation, Bindable, Call, Expression,
+    FunctionStatement, LetStatement, Literal, Null, StructAccess, StructFieldInitializer,
+    StructStatement,
 };
+
+use super::sound::SoundChecker;
 
 pub type FunctionParameter = (Type, String);
 
@@ -24,6 +27,12 @@ pub enum Type {
     Float,
     String,
     Bool,
+    /// Like a struct but this one, can reference itself, using a pointer to its own type
+    StructRef {
+        name: String,
+        fields: Vec<FunctionParameter>,
+        self_reference_names: Vec<String>,
+    },
     Struct {
         name: String,
         fields: Vec<FunctionParameter>,
@@ -86,6 +95,21 @@ impl Type {
                     array_type: rarray_rtype,
                 },
             ) => lsize == rsize && larray_type.is_compatible_with(rarray_rtype),
+            (
+                Type::Struct {
+                    fields: lfields, ..
+                },
+                Type::Struct {
+                    fields: rfields, ..
+                },
+            ) => {
+                lfields.len() == rfields.len()
+                    && lfields.iter().all(|(lf_ty, lf_name)| {
+                        rfields.iter().any(|(rf_ty, rf_name)| {
+                            lf_ty.is_compatible_with(rf_ty) && lf_name == rf_name
+                        })
+                    })
+            }
             // Void pointer is compatible with any pointer type
             (Type::Ptr(l), Type::Ptr(_)) if l.as_ref() == &Type::Void => true,
             (Type::Ptr(_), Type::Ptr(r)) if r.as_ref() == &Type::Void => true,
@@ -124,7 +148,70 @@ impl Type {
     }
 }
 
+impl From<ast::Type> for Type {
+    fn from(value: ast::Type) -> Self {
+        match value.kind {
+            ast::TypeKind::Identifier(ref id) => {
+                let struct_stmt = value.get_struct_def();
+                let mut checker = SoundChecker::new(id);
+                match checker.get_safe_self_references(struct_stmt) {
+                    Ok(&[]) => Type::Struct {
+                        name: struct_stmt.name.clone(),
+                        fields: struct_stmt
+                            .fields
+                            .iter()
+                            .map(|(ty, name)| (ty.to_owned().into(), name.to_owned()))
+                            .collect(),
+                    },
+                    Ok(fields) => Type::StructRef {
+                        name: struct_stmt.name.clone(),
+                        fields: struct_stmt
+                            .fields
+                            .iter()
+                            // Remove all fields that are self referential.
+                            // TODO: Use `box_patterns` to simplify the expression once stabilized
+                            .filter(|(ty, _)| {
+                                !matches!(&ty.kind, ast::TypeKind::Ptr(ptr_ty)
+                                                       if matches!(&ptr_ty.as_ref().kind,
+                                                                   ast::TypeKind::Identifier(id)
+                                                                   if fields.contains(id)))
+                            })
+                            .map(|(ty, name)| (ty.to_owned().into(), name.to_owned()))
+                            .collect(),
+                        self_reference_names: fields.iter().map(|f| f.to_owned()).collect(),
+                    },
+                    Err(e) => panic!("Sound checker encountered an error: {e:?}"),
+                }
+            }
+            ast::TypeKind::U8 => Type::U8,
+            ast::TypeKind::U16 => Type::U16,
+            ast::TypeKind::U32 => Type::U32,
+            ast::TypeKind::U64 => Type::U64,
+            ast::TypeKind::I8 => Type::I8,
+            ast::TypeKind::I16 => Type::I16,
+            ast::TypeKind::I32 => Type::I32,
+            ast::TypeKind::I64 => Type::I64,
+            ast::TypeKind::String => Type::String,
+            ast::TypeKind::Bool => Type::Bool,
+            ast::TypeKind::Float => Type::Float,
+            ast::TypeKind::Void => Type::Void,
+            ast::TypeKind::Array { size, array_type } => Type::Array {
+                size,
+                array_type: Box::new(array_type.kind.into()),
+            },
+            ast::TypeKind::Ptr(ptr) => Type::Ptr(Box::new(ptr.deref().to_owned().into())),
+            ast::TypeKind::Null { .. } => Type::Null {
+                concrete_type: None,
+            },
+        }
+    }
+}
+
 impl From<ast::TypeKind> for Type {
+    /// # Panic
+    /// This panic if  value is `ast::TypeKind::Identifier(_)`. The conversion
+    /// cannot be done directly because of a struct is bound to a declaration.
+    /// Use `From<ast::Type> instead`
     fn from(value: ast::TypeKind) -> Self {
         match value {
             ast::TypeKind::U8 => Type::U8,
@@ -138,16 +225,13 @@ impl From<ast::TypeKind> for Type {
             ast::TypeKind::String => Type::String,
             ast::TypeKind::Bool => Type::Bool,
             ast::TypeKind::Float => Type::Float,
-            ast::TypeKind::Identifier(name) => Type::Struct {
-                name,
-                fields: Vec::new(),
-            },
+            ast::TypeKind::Identifier(_) => unreachable!(),
             ast::TypeKind::Void => Type::Void,
             ast::TypeKind::Array { size, array_type } => Type::Array {
                 size,
                 array_type: Box::new(array_type.kind.into()),
             },
-            ast::TypeKind::Ptr(ptr) => Type::Ptr(Box::new(ptr.deref().to_owned().kind.into())),
+            ast::TypeKind::Ptr(ptr) => Type::Ptr(Box::new(ptr.deref().to_owned().into())),
             ast::TypeKind::Null { .. } => Type::Null {
                 concrete_type: None,
             },
@@ -161,7 +245,7 @@ pub trait Typable {
 }
 
 macro_rules! impl_typables {
-    ( $( $name:ty ),* ) => {
+    ( $( $name:ty ),* $(,)? ) => {
         $(
             impl Typable for $name {
                 fn get_type(&self) -> &Type {
@@ -177,16 +261,18 @@ macro_rules! impl_typables {
 }
 
 impl_typables!(
+    ArrayAccess,
+    ArrayInitializer,
     Assignment,
     BinaryOperation,
     Call,
     FunctionStatement,
     LetStatement,
     Literal,
-    ArrayAccess,
     Null,
-    ArrayInitializer,
-    StructStatement
+    StructAccess,
+    StructFieldInitializer,
+    StructStatement,
 );
 
 impl Typable for Expression {
@@ -198,8 +284,10 @@ impl Typable for Expression {
             Expression::Call(c) => c.get_type(),
             Expression::Assignment(a) => a.get_type(),
             Expression::ArrayInitializer(a) => a.get_type(),
-            Expression::AddrOf(_) => todo!(),
-            Expression::Deref(_) => todo!(),
+            Expression::AddrOf(_) => unreachable!(),
+            Expression::Deref(d) => d.get_type(),
+            Expression::StructAccess(sa) => sa.get_type(),
+            _ => unreachable!("access type {:?}", self),
         }
     }
 

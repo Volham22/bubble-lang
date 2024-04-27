@@ -16,11 +16,78 @@ pub enum Expression {
     ArrayInitializer(ArrayInitializer),
     AddrOf(AddrOf),
     Deref(Deref),
+    StructInit(StructInitialization),
+    StructAccess(StructAccess),
 }
 
 impl Expression {
     pub fn is_literal(&self) -> bool {
         matches!(self, Expression::Literal(_))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct StructAccess {
+    pub identifier: Box<Expression>,
+    pub field: Box<Expression>,
+    location: TokenLocation,
+    pub(crate) definition: Option<Definition>,
+    pub(crate) ty: Option<type_system::Type>,
+}
+
+impl StructAccess {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        identifier: Box<Expression>,
+        field: Box<Expression>,
+    ) -> Self {
+        Self {
+            identifier,
+            field,
+            location: TokenLocation::new(tk_begin, tk_end),
+            definition: None,
+            ty: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct StructFieldInitializer {
+    pub name: String,
+    pub init_expression: Box<Expression>,
+    location: TokenLocation,
+    pub(crate) ty: Option<type_system::Type>,
+}
+
+impl StructFieldInitializer {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        name: String,
+        init_expression: Box<Expression>,
+    ) -> Self {
+        Self {
+            name,
+            init_expression,
+            location: TokenLocation::new(tk_begin, tk_end),
+            ty: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct StructInitialization {
+    pub fields: Vec<StructFieldInitializer>,
+    location: TokenLocation,
+}
+
+impl StructInitialization {
+    pub fn new(tk_begin: usize, tk_end: usize, fields: Vec<StructFieldInitializer>) -> Self {
+        Self {
+            fields,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
     }
 }
 
@@ -242,5 +309,8 @@ impl_locatable!(
     Call,
     Deref,
     Literal,
-    Null
+    Null,
+    StructAccess,
+    StructFieldInitializer,
+    StructInitialization
 );

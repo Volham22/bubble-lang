@@ -98,6 +98,12 @@ use rstest::rstest;
 #[case::ptr_lex("deref", &[ Token::Deref ])]
 #[case::addrof_var("deref x", &[ Token::Deref, Token::Identifier("x".to_string()) ])]
 #[case::null("null", &[ Token::Null ])]
+#[case::dot_access("a.b", &[
+       Token::Identifier("a".to_string()),
+       Token::Dot,
+       Token::Identifier("b".to_string())
+    ]
+)]
 fn test_code_lexing(#[case] source_code: &str, #[case] expected: &[Token]) {
     let lexer = Token::lexer(source_code);
     let tokens: Vec<Token> = lexer.collect();

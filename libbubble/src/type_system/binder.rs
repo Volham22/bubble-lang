@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::ast::{
     Bindable, BreakStatement, Call, ContinueStatement, Definition, Expression, ForStatement,
     FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType, Locatable,
-    MutableVisitor, ReturnStatement, StructStatement, Type, TypeKind, WhileStatement,
+    MutableVisitor, ReturnStatement, StructAccess, StructStatement, Type, TypeKind, WhileStatement,
 };
 
 use super::{errors::BinderError, utils::ScopedMap};
@@ -70,14 +70,16 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
             self.local_variables.delete_scope();
         }
 
+        self.visit_type(&mut stmt.return_type)?;
+
         Ok(())
     }
 
     fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), BinderError> {
         self.struct_statement.insert(stmt.name.to_string(), stmt);
 
-        for (kind, _) in &mut stmt.fields {
-            self.visit_type_kind(kind)?;
+        for (ty, _) in stmt.fields.iter_mut() {
+            self.visit_type(ty)?;
         }
 
         Ok(())
@@ -85,6 +87,12 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
 
     fn visit_let(&mut self, stmt: &'ast mut LetStatement) -> Result<(), BinderError> {
         self.local_variables.insert_symbol(&stmt.name, stmt);
+
+        // Bind type identifier to its concrete type
+        if let Some(ty) = &mut stmt.declaration_type {
+            self.visit_type(ty)?;
+        }
+
         self.visit_expression(
             stmt.init_exp
                 .as_mut()
@@ -240,20 +248,54 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
     }
 
     fn visit_type(&mut self, expr: &'ast mut Type) -> Result<(), BinderError> {
-        match &expr.kind {
+        match &mut expr.kind {
             TypeKind::Identifier(name) => {
-                let declaration = self.struct_statement.get(name);
+                let name = name.clone();
+                let declaration = self.struct_statement.get(&name);
                 if let Some(dec) = declaration {
                     expr.set_definition(Definition::Struct(*dec));
                     Ok(())
                 } else {
                     Err(BinderError::UndeclaredStruct {
                         location: expr.get_location().clone(),
-                        name: name.clone(),
+                        name,
                     })
                 }
             }
+            TypeKind::Ptr(ty) => self.visit_type(ty),
+            TypeKind::Array { array_type, .. } => self.visit_type(array_type),
             _ => Ok(()),
         }
+    }
+
+    fn visit_struct_access(&mut self, stmt: &'ast mut StructAccess) -> Result<(), BinderError> {
+        self.visit_expression(&mut stmt.identifier)?;
+        if let Expression::StructAccess(sa) = stmt.identifier.as_ref() {
+            stmt.set_definition(*sa.get_definition());
+            return Ok(());
+        }
+
+        let struct_name = match &stmt.identifier.as_ref() {
+            Expression::Literal(Literal {
+                literal_type: LiteralType::Identifier(struct_name),
+                ..
+            }) => struct_name,
+            // Expression::StructAccess(sa) => &sa.get_struct_def().name,
+            _ => {
+                return Err(BinderError::NonIdentifierFieldAccess(
+                    stmt.get_location().to_owned(),
+                ))
+            }
+        };
+
+        let strct = self.local_variables.find_symbol(struct_name).ok_or(
+            BinderError::UndeclaredVariable {
+                location: stmt.get_location().to_owned(),
+                name: struct_name.to_owned(),
+            },
+        )?;
+
+        stmt.definition = Some(Definition::LocalVariable(*strct));
+        Ok(())
     }
 }
