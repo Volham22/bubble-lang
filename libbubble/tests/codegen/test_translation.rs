@@ -433,6 +433,39 @@ fn test_translation(
     0,
     "51"
 )]
+#[case::generate_simple_procedure(
+    r#"
+    extern function puts(msg: string): i32;
+
+    function f(): void {
+        puts("Hey");
+    }
+
+    function main(): i32 {
+        f();
+        return 0;
+    }"#,
+    "/tmp/generate_simple_procedure",
+    0,
+    "Hey\n"
+)]
+#[case::generate_simple_procedure_explicit_void_return(
+    r#"
+    extern function puts(msg: string): i32;
+
+    function f(): void {
+        puts("Hey");
+        return;
+    }
+
+    function main(): i32 {
+        f();
+        return 0;
+    }"#,
+    "/tmp/generate_simple_procedure_explicit_void_return",
+    0,
+    "Hey\n"
+)]
 fn test_translation_with_stdout(
     #[case] code: &str,
     #[case] executable_path: &str,

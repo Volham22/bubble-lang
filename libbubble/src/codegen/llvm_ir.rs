@@ -319,6 +319,13 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         }
 
         self.visit_statements(stmt.body.as_ref().unwrap())?;
+
+        if matches!(stmt.return_type.kind, ast::TypeKind::Void) {
+            self.builder
+                .build_return(None)
+                .expect("Failed to build return on void function");
+        }
+
         self.current_fn_value = None;
 
         Ok(())
