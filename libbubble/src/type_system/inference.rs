@@ -245,6 +245,12 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
 
                 if !expected_type.is_compatible_with(&Type::Int) {
                     return Err(TypeCheckerError::BadParameter {
+                        location: expr
+                            .arguments
+                            .get(i)
+                            .expect("unreachable")
+                            .get_location()
+                            .clone(),
                         name: expr.get_function_def().name.clone(),
                         expected_type,
                         got: Type::Int,
@@ -258,7 +264,10 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
 
             Ok(())
         } else {
-            Err(TypeCheckerError::NotCallable(*expr.get_definition()))
+            Err(TypeCheckerError::NotCallable(
+                expr.get_location().clone(),
+                *expr.get_definition(),
+            ))
         }
     }
 

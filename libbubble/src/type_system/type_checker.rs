@@ -58,6 +58,7 @@ impl<'ast> TypeChecker {
         {
             Type::Bool => Ok(()),
             _ => Err(TypeCheckerError::NonBoolCondition(
+                expr.get_location().clone(),
                 self.current_type.clone().unwrap(),
             )),
         }
@@ -119,6 +120,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                         .expect("return expression has no type"),
                 ) {
                     Err(TypeCheckerError::ReturnTypeMismatch {
+                        location: stmt.get_location().clone(),
                         got: self.current_type.clone().unwrap(),
                         expected: return_type.deref().clone(),
                     })
@@ -165,6 +167,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     .is_compatible_with(self.current_type.as_ref().expect("let init has no type"))
                 {
                     return Err(TypeCheckerError::BadInit {
+                        location: stmt.init_exp.as_ref().unwrap().get_location().clone(),
                         left: real_type,
                         right: self.current_type.clone().unwrap(),
                     });
@@ -246,6 +249,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
 
         if !lhs_ty.is_compatible_with(rhs_ty) {
             return Err(TypeCheckerError::BadAssigment {
+                location: expr.get_location().clone(),
                 left: lhs_ty,
                 right: rhs_ty.clone(),
             });
@@ -260,6 +264,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
         if expr.get_definition().is_function() {
             if expr.arguments.len() != expr.get_function_def().parameters.len() {
                 return Err(TypeCheckerError::BadParameterCount {
+                    location: expr.get_location().clone(),
                     expected: expr.get_function_def().parameters.len() as u32,
                     got: expr.arguments.len() as u32,
                 });
@@ -287,6 +292,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
 
                 if !expr_type.is_compatible_with(&expected_type) {
                     return Err(TypeCheckerError::BadParameter {
+                        location: expr.get_location().clone(),
                         name: function_parameter.name.clone(),
                         expected_type,
                         got: self.current_type.clone().unwrap(),
@@ -298,7 +304,10 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             self.current_type = Some(expr.get_function_def().return_type.clone().into());
             Ok(())
         } else {
-            Err(TypeCheckerError::NotCallable(*expr.get_definition()))
+            Err(TypeCheckerError::NotCallable(
+                expr.get_location().clone(),
+                *expr.get_definition(),
+            ))
         }
     }
 
@@ -329,6 +338,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
 
                 if !left_ty.is_compatible_with(right_ty) {
                     return Err(TypeCheckerError::IncompatibleOperationType {
+                        location: expr.get_location().clone(),
                         operator: expr.op,
                         left_ty,
                         right_ty: self.current_type.clone().unwrap(),
@@ -436,7 +446,12 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     Type::Array { array_type, .. } => {
                         literal.set_type(array_type.clone().deref().to_owned());
                     }
-                    _ => return Err(TypeCheckerError::NonSubscriptable { ty }),
+                    _ => {
+                        return Err(TypeCheckerError::NonSubscriptable {
+                            location: literal.get_location().clone(),
+                            ty,
+                        })
+                    }
                 }
             }
             LiteralType::Null(_) => {
@@ -463,6 +478,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             let index_type = self.current_type.as_ref().expect("Should have a type");
             if !index_type.is_integer() {
                 return Err(TypeCheckerError::IndexNotInteger {
+                    location: aa.get_location().clone(),
                     got: index_type.clone(),
                 });
             }
@@ -496,6 +512,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 != &first_type
             {
                 return Err(TypeCheckerError::DifferentTypeInArrayInitializer {
+                    location: expr.get_location().clone(),
                     first: first_type,
                     found: self.current_type.clone().unwrap(),
                     position: i as u32,
@@ -534,6 +551,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 Ok(())
             }
             _ => Err(TypeCheckerError::DerefNonPointer(
+                expr.get_location().clone(),
                 self.current_type.clone().unwrap(),
             )),
         }

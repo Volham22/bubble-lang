@@ -1,4 +1,4 @@
-use crate::ast::{self, Bindable, TypeKind, Visitor};
+use crate::ast::{self, Bindable, Locatable, TypeKind, Visitor};
 
 use super::TypeCheckerError;
 
@@ -38,6 +38,7 @@ impl<'ast> Visitor<'ast, TypeCheckerError> for SoundChecker<'ast> {
     fn visit_struct(&mut self, stmt: &'ast ast::StructStatement) -> Result<(), TypeCheckerError> {
         if stmt.name == self.type_name {
             return Err(TypeCheckerError::SelfReferentialStruct(
+                stmt.get_location().clone(),
                 stmt.name.to_owned(),
             ));
         }
@@ -51,7 +52,7 @@ impl<'ast> Visitor<'ast, TypeCheckerError> for SoundChecker<'ast> {
             TypeKind::Ptr(inner_ty) => match self.visit_type(inner_ty) {
                 // Error recovery here. Self reference through pointer is legal, but we need to
                 // be able to detect it to handle it properly
-                Err(TypeCheckerError::SelfReferentialStruct(name)) => {
+                Err(TypeCheckerError::SelfReferentialStruct(_, name)) => {
                     self.self_reference.push(name);
                     Ok(())
                 }

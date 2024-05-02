@@ -1,26 +1,3 @@
-#[derive(Debug, Clone)]
-pub struct TokenLocation {
-    pub line: usize,
-    pub column: usize,
-    pub begin: usize,
-    pub end: usize,
-}
-
-impl TokenLocation {
-    pub fn new(begin: usize, end: usize) -> Self {
-        Self {
-            line: 0,
-            column: 0,
-            begin,
-            end,
-        }
-    }
-}
-
-pub trait Locatable {
-    fn get_location(&self) -> &TokenLocation;
-}
-
 macro_rules! impl_locatable {
     ( $( $t:ty ),* ) => {
 
@@ -40,4 +17,36 @@ macro_rules! impl_locatable {
     };
 }
 
+#[macro_export]
+macro_rules! location_to_span {
+    ( $loc:ident ) => {
+        $loc.begin..$loc.end
+    };
+}
+
+#[derive(Debug, Clone)]
+pub struct TokenLocation {
+    pub begin: usize,
+    pub end: usize,
+}
+
+impl From<TokenLocation> for Range<usize> {
+    fn from(value: TokenLocation) -> Self {
+        value.begin..value.end
+    }
+}
+
+impl TokenLocation {
+    pub fn new(begin: usize, end: usize) -> Self {
+        Self { begin, end }
+    }
+}
+
+pub trait Locatable {
+    fn get_location(&self) -> &TokenLocation;
+}
+
+use std::ops::Range;
+
 pub(crate) use impl_locatable;
+pub use location_to_span;
