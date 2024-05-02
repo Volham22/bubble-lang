@@ -18,30 +18,43 @@ use crate::{
     io::load_source_file,
 };
 
-fn parse_source_code(source_code: &str) -> CompilerResult<Vec<ast::GlobalStatement>> {
+fn parse_source_code(
+    source_code: &str,
+    source_path: &Path,
+) -> CompilerResult<Vec<ast::GlobalStatement>> {
     let lexer = Lexer::new(source_code);
     let parser = GlobalStatementsParser::new();
 
-    parser.parse(lexer).map_err(CompilerError::Parser)
+    parser.parse(lexer).map_err(|error| CompilerError::Parser {
+        error,
+        source_file: source_path.to_owned(),
+    })
 }
 
-fn run_type_checker(stmts: &mut [ast::GlobalStatement]) -> CompilerResult<()> {
+fn run_type_checker(stmts: &mut [ast::GlobalStatement], source_path: &Path) -> CompilerResult<()> {
     let mut binder = Binder::default();
     binder
         .bind_statements(stmts)
-        .map_err(CompilerError::Binder)?;
+        .map_err(|error| CompilerError::Binder {
+            error,
+            source_file: source_path.to_owned(),
+        })?;
 
-    type_system::run_type_checker(stmts).map_err(CompilerError::TypeChecker)
+    type_system::run_type_checker(stmts).map_err(|error| CompilerError::TypeChecker {
+        error,
+        source_file: source_path.to_owned(),
+    })
 }
 
 fn build_object(
     source_code: &str,
+    source_path: &Path,
     object_name: &Path,
     print_llvmir: bool,
     emit_llvmir: bool,
 ) -> CompilerResult<()> {
-    let mut stmts = parse_source_code(source_code)?;
-    run_type_checker(&mut stmts)?;
+    let mut stmts = parse_source_code(source_code, source_path)?;
+    run_type_checker(&mut stmts, source_path)?;
     let desugared_stmts = desugar_ast(stmts);
     let llvm_context = Context::create();
     let llvm_module = llvm_context.create_module(
@@ -106,7 +119,13 @@ pub fn build_objects_targets(
                 .to_str()
                 .expect("Failed to convert to str")
         ));
-        build_object(&source_code, &object_path, print_llvmir, emit_llvmir)?;
+        build_object(
+            &source_code,
+            source_code_path,
+            &object_path,
+            print_llvmir,
+            emit_llvmir,
+        )?;
         built_objects.push(object_path);
     }
 

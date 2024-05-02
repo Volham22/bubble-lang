@@ -690,7 +690,7 @@ fn type_checker_valid(#[case] code: &str) {
 
         return 0;
     }"#,
-    TypeCheckerError::InferenceError(ast::TokenLocation { line: 0, column: 0, begin: 36, end: 91 })
+    TypeCheckerError::InferenceError(ast::TokenLocation { begin: 36, end: 91 })
 )]
 #[case::array_init_missing_values(
     r#"
@@ -741,7 +741,7 @@ fn type_checker_valid(#[case] code: &str) {
         let arr = [1, 2, 3];
         return 0;
     }"#,
-    TypeCheckerError::InferenceError(ast::TokenLocation { line: 0, column: 0, begin: 36, end: 56 }),
+    TypeCheckerError::InferenceError(ast::TokenLocation { begin: 36, end: 56 }),
 )]
 #[case::array_access_non_subscriptable_type(
     r#"

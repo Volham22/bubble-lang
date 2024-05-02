@@ -6,7 +6,7 @@ use std::{
 use crate::errors::{CompilerError, CompilerResult};
 
 const LD_LOADER_PATH: &str = "/lib64/ld-linux-x86-64.so.2";
-const LD_PATH: &str = "/usr/bin/ld";
+pub(crate) const LD_PATH: &str = "/usr/bin/ld";
 
 pub fn link_objects(
     objects: &[&Path],

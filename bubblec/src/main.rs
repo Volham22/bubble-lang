@@ -4,6 +4,7 @@ use std::{
 };
 
 use clap::Parser;
+use linker::LD_PATH;
 
 mod cli;
 mod errors;
@@ -36,12 +37,21 @@ fn main() {
                         .as_ref()
                         .map(|p| p.to_str().expect("failed to convert to path")),
                 ) {
-                    eprintln!("{e:?}");
+                    errors::print_error(
+                        &e,
+                        &cli.ld_path.unwrap_or(PathBuf::from_str(LD_PATH).unwrap()),
+                    )
+                    .expect("failed to print error to the terminal");
+                    std::process::exit(1);
                 }
             }
         }
-        Err(e) => {
-            eprintln!("{:?}", e);
+        Err(ref e) => {
+            errors::print_error(
+                e,
+                &cli.ld_path.unwrap_or(PathBuf::from_str(LD_PATH).unwrap()),
+            )
+            .expect("failed to print error to the terminal");
             std::process::exit(1);
         }
     }
