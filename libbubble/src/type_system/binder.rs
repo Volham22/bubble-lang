@@ -52,6 +52,10 @@ impl Binder {
 
 impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
     fn visit_function(&mut self, stmt: &'ast mut FunctionStatement) -> Result<(), BinderError> {
+        for param in stmt.parameters.iter_mut() {
+            self.visit_let(param)?;
+        }
+
         self.functions_statements
             .insert(stmt.name.to_string(), stmt);
 
@@ -93,11 +97,11 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
             self.visit_type(ty)?;
         }
 
-        self.visit_expression(
-            stmt.init_exp
-                .as_mut()
-                .expect("variable declaration has no init type!"),
-        )?;
+        // A parameter is a let statement in the ast but as no init expression.
+        // Init expression are enforced in the grammar and are always present otherwise.
+        if let Some(init_exp) = stmt.init_exp.as_mut() {
+            self.visit_expression(init_exp)?;
+        }
 
         Ok(())
     }
