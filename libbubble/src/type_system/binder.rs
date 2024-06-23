@@ -284,11 +284,8 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
                 literal_type: LiteralType::Identifier(struct_name),
                 ..
             }) => struct_name,
-            // Expression::StructAccess(sa) => &sa.get_struct_def().name,
             _ => {
-                return Err(BinderError::NonIdentifierFieldAccess(
-                    stmt.get_location().to_owned(),
-                ))
+                return Ok(());
             }
         };
 

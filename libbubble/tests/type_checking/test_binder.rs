@@ -121,6 +121,34 @@ use crate::assets::parse_global_statements_input;
         return 0;
 }"#
 )]
+#[case::access_field_of_deref(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function f(): i32 {
+        let p: Point = struct { x: 0, y: 0 };
+        let ptr_p: ptr Point = addrof p;
+        return (deref ptr_p).x;
+    }
+    "#
+)]
+#[case::deref_field_of_parameter_ptr(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function main(): i32 {
+        let p: Point = struct { x: 0, y: 42 };
+        let ptr_p: ptr Point = addrof p;
+        return (deref ptr_p).x;
+    }
+    "#
+)]
 fn test_binding_good(#[case] code: &str) {
     let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
     let mut binder = binder::Binder::default();
