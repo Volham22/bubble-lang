@@ -206,7 +206,7 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
             .iter()
             .map(|f| match f.init_expression.as_ref() {
                 // Nested struct init
-                Expression::StructInit(si) => self.get_llvm_struct_type(si).into(),
+                // Expression::StructInit(si) => self.get_llvm_struct_type(si).into(),
                 _ => self.as_basic_type(self.to_llvm_type(f.init_expression.get_type())),
             })
             .collect();
@@ -811,6 +811,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 let llvm_ty = self.to_llvm_type(n.get_type()).into_pointer_type();
                 self.current_value = Some(llvm_ty.const_null().into());
             }
+            LiteralType::StructInit(_si) => todo!(),
         }
 
         Ok(())

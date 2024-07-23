@@ -176,24 +176,8 @@ Type: Type = {
 }
 
 Expr: Expression = {
-    StructAccess,
-    <l:@L> <left:AddrOf> "=" <right:AddrOf> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
-}
-
-StructAccess: Expression = {
-    #[precedence(level="0")]
-    StructInitialization,
-    #[precedence(level="1")] #[assoc(side = "left")]
-    <l:@L> <left:StructAccess> "." <right:StructAccess> <r:@R> => Expression::StructAccess(StructAccess::new(l, r, Box::new(left), Box::new(right))),
-}
-
-StructFieldInit: StructFieldInitializer = {
-     <l:@L> <val:"identifier"> ":" <exp:Expr> <r:@R> => StructFieldInitializer::new(l, r, val, Box::new(exp)),
- }
-
-StructInitialization: Expression = {
     AddrOf,
-    <l:@L> "struct" "{" <fields_init:Comma<StructFieldInit>> "}" <r:@R> => Expression::StructInit(StructInitialization::new(l, r, fields_init)),
+    <l:@L> <left:AddrOf> "=" <right:AddrOf> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
 }
 
 AddrOf: Expression = {
@@ -268,7 +252,12 @@ Group: Expression = {
     "(" <expr:Expr> ")" => Expression::Group(Box::new(expr)),
     <p:Primary> => Expression::Literal(p),
     <l:@L> <callee:"identifier"> "(" <args:Comma<Expr>> ")" <r:@R> => Expression::Call(Call::new(l, r, callee, args)),
+    <l:@L> <left:Primary> "." <right:Group> <r:@R> => Expression::StructAccess(StructAccess::new(l, r, Box::new(Expression::Literal(left)), Box::new(right))),
 }
+
+StructFieldInit: StructFieldInitializer = {
+     <l:@L> <val:"identifier"> ":" <exp:Expr> <r:@R> => StructFieldInitializer::new(l, r, val, Box::new(exp)),
+ }
 
 Primary: Literal = {
     <l:@L> "true"       <r:@R> => Literal::new(l, r, LiteralType::True),
@@ -278,6 +267,7 @@ Primary: Literal = {
     <l:@L> <val:"float">      <r:@R> => Literal::new(l, r, LiteralType::Float(val)),
     <l:@L> <val:"identifier"> <r:@R> => Literal::new(l, r, LiteralType::Identifier(val)),
     <l:@L> <val:"string">     <r:@R> => Literal::new(l, r, LiteralType::String(val)),
+    <l:@L> "struct" "{" <fields_init:Comma<StructFieldInit>> "}" <r:@R> => Literal::new(l, r, LiteralType::StructInit(StructInitialization::new(l, r, fields_init))),
 }
 
 extern {

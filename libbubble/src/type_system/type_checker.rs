@@ -462,6 +462,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 // No need to go further.
                 return Ok(());
             }
+            LiteralType::StructInit(_) => todo!(),
         };
 
         // The identifier type should be the array type. We need to do it
