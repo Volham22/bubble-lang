@@ -1,4 +1,4 @@
-use std::convert::Infallible;
+use std::{convert::Infallible, ops::DerefMut};
 
 use crate::ast::{self, *};
 
@@ -38,6 +38,11 @@ impl<'ast, 'ty> MutableVisitor<'ast, Infallible> for ExpressionTypeSetter<'ty> {
                 aa.set_type(self.new_type.clone());
             }
             LiteralType::Null(n) => n.set_type(self.new_type.clone()),
+            LiteralType::StructInit(si) => {
+                for field in si.fields.iter_mut() {
+                    self.visit_expression(&mut field.init_expression)?;
+                }
+            }
             _ => (),
         }
 
@@ -90,50 +95,48 @@ impl IntegerInference {
         Ok(())
     }
 
-    // fn infer_struct_recursively(init_exp: &mut StructInitialization, struct_decl: &Type) {
-    //     // Recurse for struct fields
-    //     for field in init_exp
-    //         .fields
-    //         .iter_mut()
-    //         .filter(|f| matches!(f.init_expression.as_ref(), Expression::StructInit(_)))
-    //     {
-    //         let Type::Struct {
-    //             fields: real_type, ..
-    //         } = struct_decl
-    //         else {
-    //             unreachable!()
-    //         };
-    //         let ast::Expression::StructInit(struct_init_expr) = field.init_expression.as_mut()
-    //         else {
-    //             unreachable!();
-    //         };
-    //
-    //         Self::infer_struct_recursively(
-    //             struct_init_expr,
-    //             real_type
-    //                 .iter()
-    //                 .find(|(_, name)| name == &field.name)
-    //                 .map(|(ty, _)| ty)
-    //                 .expect("Field not present in struct declaration"),
-    //         );
-    //     }
-    //
-    //     let Type::Struct {
-    //         fields: fields_ty, ..
-    //     } = struct_decl
-    //     else {
-    //         panic!("Expected struct type but got: {struct_decl:?}");
-    //     };
-    //
-    //     for (i, init) in init_exp.fields.iter_mut().enumerate().filter(|(_, f)| {
-    //         !matches!(f.init_expression.as_ref(), Expression::StructInit(_))
-    //             && f.init_expression.get_type().is_integer()
-    //     }) {
-    //         let (real_ty, _) = fields_ty.get(i).expect("Type mismatch");
-    //         let mut setter = ExpressionTypeSetter::new(real_ty);
-    //         setter.set_type_recusively(&mut init.init_expression);
-    //     }
-    // }
+    fn infer_struct_recursively(init_expr: &mut StructInitialization, struct_decl: &Type) {
+        let Type::Struct {
+            fields: fields_ty, ..
+        } = struct_decl
+        else {
+            unreachable!();
+        };
+        for expr in init_expr.fields.iter_mut() {
+            match expr.get_type() {
+                Type::Struct { .. } => {
+                    let sub_ty = fields_ty
+                        .iter()
+                        .find(|(_, name)| &expr.name == name)
+                        .map(|(ty, _)| ty)
+                        .expect("type must be present");
+
+                    let ast::Expression::Literal(Literal {
+                        literal_type: ast::LiteralType::StructInit(sub_init),
+                        ..
+                    }) = expr.init_expression.deref_mut()
+                    else {
+                        unreachable!();
+                    };
+
+                    // First, infer initializer types recursively and then update the struct type
+                    // ifself
+                    Self::infer_struct_recursively(sub_init, sub_ty);
+                    expr.set_type(sub_ty.to_owned());
+                }
+                Type::Int => {
+                    let (field_ty, _) = fields_ty
+                        .iter()
+                        .find(|(_, name)| &expr.name == name)
+                        .expect("no such field in type");
+                    let mut setter = ExpressionTypeSetter::new(field_ty);
+                    setter.set_type_recusively(&mut expr.init_expression);
+                    expr.set_type(field_ty.clone());
+                }
+                _ => continue,
+            }
+        }
+    }
 }
 
 /// This visitor is here to infer proper integer types to literal expressions
@@ -177,29 +180,32 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
         if self.is_int {
             match stmt.declaration_type.as_ref() {
                 // Struct case
-                // Some(ast::Type {
-                //     kind: ast::TypeKind::Identifier(_),
-                //     definition: Some(_),
-                //     ..
-                // }) => {
-                //     let ast::Expression::Literal(init_exp) = stmt
-                //         .init_exp
-                //         .as_mut()
-                //         .expect("Init expression must be present")
-                //         .as_mut()
-                //     else {
-                //         panic!("Struct intialized with a non struct init type");
-                //     };
+                Some(ast::Type {
+                    kind: ast::TypeKind::Identifier(_),
+                    definition: Some(_),
+                    ..
+                }) => {
+                    let ast::Expression::Literal(Literal {
+                        literal_type: ast::LiteralType::StructInit(init_exp),
+                        ..
+                    }) = stmt
+                        .init_exp
+                        .as_mut()
+                        .expect("Init expression must be present")
+                        .as_mut()
+                    else {
+                        panic!("Struct intialized with a non struct init type");
+                    };
 
-                //     Self::infer_struct_recursively(
-                //         init_exp,
-                //         stmt.declaration_type
-                //             .as_ref()
-                //             .unwrap()
-                //             .get_struct_def()
-                //             .get_type(),
-                //     );
-                // }
+                    Self::infer_struct_recursively(
+                        init_exp,
+                        stmt.declaration_type
+                            .as_ref()
+                            .unwrap()
+                            .get_struct_def()
+                            .get_type(),
+                    );
+                }
                 Some(_) => {
                     let statement_ty = match stmt.get_type() {
                         // If it's an array we need to set inner expression type to the base type
@@ -298,10 +304,15 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
     }
 
     fn visit_literal(&mut self, expr: &'ast mut Literal) -> Result<(), TypeCheckerError> {
-        match expr.literal_type {
+        match &mut expr.literal_type {
             LiteralType::Integer(_) | LiteralType::ArrayAccess(_) => {
                 if let Type::Int = expr.get_type() {
                     self.is_int = true;
+                }
+            }
+            LiteralType::StructInit(init) => {
+                for expr in init.fields.iter_mut() {
+                    self.visit_expression(&mut expr.init_expression)?;
                 }
             }
             _ => {

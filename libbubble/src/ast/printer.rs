@@ -295,8 +295,8 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
     }
 
     fn visit_struct_access(&mut self, expr: &'ast StructAccess) -> Result<(), io::Error> {
-        self.write(".(")?;
         self.visit_expression(&expr.identifier)?;
-        self.write(")")
+        self.write(".")?;
+        self.visit_expression(&expr.field)
     }
 }

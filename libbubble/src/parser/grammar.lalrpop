@@ -176,19 +176,19 @@ Type: Type = {
 }
 
 Expr: Expression = {
-    AddrOf,
-    <l:@L> <left:AddrOf> "=" <right:AddrOf> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
-}
-
-AddrOf: Expression = {
-    Deref,
-    <l:@L> "addrof" <expr:AddrOf> <r:@R> => Expression::AddrOf(AddrOf::new(l, r, Box::new(expr))),
-}
-
-Deref: Expression = {
     ArrayInitialization,
-    <l:@L> "deref" <expr:AddrOf> <r:@R> => Expression::Deref(Deref::new(l, r, Box::new(expr))),
+    <l:@L> <left:ArrayInitialization> "=" <right:ArrayInitialization> <r:@R> => Expression::Assignment(Assignment::new(l, r, Box::new(left), Box::new(right))),
 }
+
+// AddrOf: Expression = {
+//     Deref,
+//     <l:@L> "addrof" <expr:AddrOf> <r:@R> => Expression::AddrOf(AddrOf::new(l, r, Box::new(expr))),
+// }
+//
+// Deref: Expression = {
+//     ArrayInitialization,
+//     <l:@L> "deref" <expr:AddrOf> <r:@R> => Expression::Deref(Deref::new(l, r, Box::new(expr))),
+// }
 
 ArrayInitialization: Expression = {
     ArrayAccess,
@@ -243,16 +243,23 @@ Factor: Expression = {
 }
 
 Unary: Expression = {
-    <l:@L> "-" <primary:Group>   <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(primary), OpType::Minus, None)),
-    <l:@L> "not" <primary:Group> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(primary), OpType::Not, None)),
+    <l:@L> "-" <primary:PtrOp>   <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(primary), OpType::Minus, None)),
+    <l:@L> "not" <primary:PtrOp> <r:@R> => Expression::BinaryOperation(BinaryOperation::new(l, r, Box::new(primary), OpType::Not, None)),
+    PtrOp,
+}
+
+PtrOp: Expression = {
+    <l:@L> "addrof" <expr:PtrOp> <r:@R> => Expression::AddrOf(AddrOf::new(l, r, Box::new(expr))),
+    <l:@L> "deref" <expr:PtrOp> <r:@R> => Expression::Deref(Deref::new(l, r, Box::new(expr))),
     Group,
 }
 
+
 Group: Expression = {
-    "(" <expr:Expr> ")" => Expression::Group(Box::new(expr)),
     <p:Primary> => Expression::Literal(p),
+    "(" <expr:Expr> ")" => Expression::Group(Box::new(expr)),
+    <l:@L> <left:Group> "." <right:Primary> <r:@R> => Expression::StructAccess(StructAccess::new(l, r, Box::new(left), Box::new(Expression::Literal(right)))),
     <l:@L> <callee:"identifier"> "(" <args:Comma<Expr>> ")" <r:@R> => Expression::Call(Call::new(l, r, callee, args)),
-    <l:@L> <left:Primary> "." <right:Group> <r:@R> => Expression::StructAccess(StructAccess::new(l, r, Box::new(Expression::Literal(left)), Box::new(right))),
 }
 
 StructFieldInit: StructFieldInitializer = {

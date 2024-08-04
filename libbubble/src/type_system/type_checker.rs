@@ -388,7 +388,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
     }
 
     fn visit_literal(&mut self, literal: &'ast mut Literal) -> Result<(), TypeCheckerError> {
-        match &literal.literal_type {
+        match &mut literal.literal_type {
             LiteralType::True | LiteralType::False => {
                 self.current_type = Some(Type::Bool);
                 literal.set_type(Type::Bool);
@@ -462,7 +462,27 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                 // No need to go further.
                 return Ok(());
             }
-            LiteralType::StructInit(_) => todo!(),
+            LiteralType::StructInit(si) => {
+                // Type expression
+                self.visit_struct_init(si)?;
+
+                let mut types = Vec::new();
+                for exp_init in si.fields.iter_mut() {
+                    self.visit_expression(&mut exp_init.init_expression)?;
+                    types.push((
+                        self.current_type.clone().expect("should have a type"),
+                        exp_init.name.clone(),
+                    ));
+                }
+                literal.set_type(Type::Struct {
+                    name: "<init>".to_string(),
+                    fields: types.clone(),
+                });
+                self.current_type = Some(Type::Struct {
+                    name: "<init>".to_string(),
+                    fields: types,
+                })
+            }
         };
 
         // The identifier type should be the array type. We need to do it
@@ -608,7 +628,10 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
             ..
         }) = expr.field.as_ref()
         else {
-            panic!("Non identifier struct access lhs. Should be caught by binder");
+            panic!(
+                "Non identifier struct access lhs. Should be caught by binder got: {:?}",
+                expr.field
+            );
         };
 
         match struct_fields.iter().find(|(_, name)| name == field_name) {

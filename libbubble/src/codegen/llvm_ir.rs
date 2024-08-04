@@ -204,10 +204,9 @@ impl<'ctx, 'ast, 'module> Translator<'ctx, 'ast, 'module> {
         let llvm_field_tys: Vec<BasicTypeEnum> = struct_init
             .fields
             .iter()
-            .map(|f| match f.init_expression.as_ref() {
-                // Nested struct init
-                // Expression::StructInit(si) => self.get_llvm_struct_type(si).into(),
-                _ => self.as_basic_type(self.to_llvm_type(f.init_expression.get_type())),
+            .map(|f| {
+                f.init_expression.as_ref();
+                self.as_basic_type(self.to_llvm_type(f.init_expression.get_type()))
             })
             .collect();
 
@@ -811,7 +810,24 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                 let llvm_ty = self.to_llvm_type(n.get_type()).into_pointer_type();
                 self.current_value = Some(llvm_ty.const_null().into());
             }
-            LiteralType::StructInit(_si) => todo!(),
+            LiteralType::StructInit(si) => {
+                let mut field_types = Vec::with_capacity(si.fields.len());
+                let mut values = Vec::with_capacity(si.fields.len());
+                for f in &si.fields {
+                    field_types.push(self.as_basic_type(self.to_llvm_type(f.get_type())));
+                    self.visit_expression(&f.init_expression)?;
+                    values.push(self.as_basic_value(
+                        self.current_value.expect("init expression has not value"),
+                    ));
+                }
+
+                self.current_value = Some(
+                    self.context
+                        .struct_type(&field_types, false)
+                        .const_named_struct(&values)
+                        .into(),
+                );
+            }
         }
 
         Ok(())
@@ -918,6 +934,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         self.visit_expression(&expr.identifier)?;
         // If it's an identifier, we don't visit the expression to avoid emitting a load because
         // we need the pointer value
+        println!("access lhs: {:?}", expr.identifier);
         let llvm_value = match expr.identifier.as_ref() {
             ast::Expression::Literal(Literal {
                 literal_type: ast::LiteralType::Identifier(name),
