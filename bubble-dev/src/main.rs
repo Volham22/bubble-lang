@@ -6,7 +6,7 @@ use inkwell::{
     OptimizationLevel,
 };
 use libbubble::{
-    ast::GlobalStatement,
+    ast::{GlobalStatement, Printer},
     codegen::build_module,
     desugar::desugar_ast,
     parser::{
@@ -36,6 +36,8 @@ fn main() {
     binder.bind_statements(&mut stmts).expect("Binder failed");
     run_type_checker(&mut stmts).expect("Type checker failed");
     stmts = desugar_ast(stmts);
+    let mut printer = Printer::default();
+    printer.print(&stmts).expect("failed to print");
 
     let context = Context::create();
     let module = context.create_module("module");

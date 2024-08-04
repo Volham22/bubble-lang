@@ -458,6 +458,34 @@ use crate::assets::run_type_checker;
         return 0;
     }"#
 )]
+#[case::function_with_struct_ptr_paramter(
+    r#"
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    function f(value: ptr Point): bool {
+        return false;
+    }"#
+)]
+#[case::call_function_with_addrof(
+    r#"
+     struct Point {
+         x: i32,
+         y: i32,
+     }
+
+     function f(value: ptr Point): bool {
+         return false;
+     }
+
+     function main(): i32 {
+         let p: Point = struct { x: 51, y: 42 };
+         f(addrof p);
+         return 0;
+     }"#
+)]
 fn type_checker_valid(#[case] code: &str) {
     let result = run_type_checker(code);
     assert!(

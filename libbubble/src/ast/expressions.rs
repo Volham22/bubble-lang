@@ -16,7 +16,6 @@ pub enum Expression {
     ArrayInitializer(ArrayInitializer),
     AddrOf(AddrOf),
     Deref(Deref),
-    StructInit(StructInitialization),
     StructAccess(StructAccess),
 }
 
@@ -37,7 +36,6 @@ impl Locatable for Expression {
             Expression::ArrayInitializer(aa) => aa.get_location(),
             Expression::AddrOf(ao) => ao.get_location(),
             Expression::Deref(dr) => dr.get_location(),
-            Expression::StructInit(si) => si.get_location(),
             Expression::StructAccess(sa) => sa.get_location(),
         }
     }
@@ -254,6 +252,7 @@ pub enum LiteralType {
     ArrayAccess(ArrayAccess),
     String(String),
     Null(Null),
+    StructInit(StructInitialization),
 }
 
 #[derive(Debug, Copy, Clone)]

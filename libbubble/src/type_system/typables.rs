@@ -287,7 +287,6 @@ impl Typable for Expression {
             Expression::AddrOf(_) => unreachable!(),
             Expression::Deref(d) => d.get_type(),
             Expression::StructAccess(sa) => sa.get_type(),
-            _ => unreachable!("access type {:?}", self),
         }
     }
 

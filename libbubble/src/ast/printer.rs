@@ -1,9 +1,9 @@
 use std::io;
 
 use super::{
-    visitor::Visitor, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
+    visitor::Visitor, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement, Deref,
     ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal,
-    ReturnStatement, StructStatement, Type, TypeKind, WhileStatement,
+    ReturnStatement, StructAccess, StructStatement, Type, TypeKind, WhileStatement,
 };
 
 pub struct Printer<Writer: io::Write> {
@@ -23,8 +23,8 @@ impl std::default::Default for Printer<io::Stdout> {
 }
 
 impl<T: io::Write> Printer<T> {
-    pub fn print(&mut self, statements: Vec<GlobalStatement>) -> PrinterResult {
-        for stmt in &statements {
+    pub fn print(&mut self, statements: &[GlobalStatement]) -> PrinterResult {
+        for stmt in statements {
             self.visit_global_statement(stmt)?;
         }
 
@@ -238,6 +238,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
                 self.visit_expression(&aa.index)?;
                 self.write("]")
             }
+            super::LiteralType::StructInit(si) => self.visit_struct_init(si),
         }
     }
 
@@ -285,5 +286,17 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
         self.visit_expression(&expr.left)?;
         self.write(" = ")?;
         self.visit_expression(&expr.right)
+    }
+
+    fn visit_deref(&mut self, expr: &'ast Deref) -> Result<(), io::Error> {
+        self.write("deref (")?;
+        self.visit_expression(&expr.expr)?;
+        self.write(")")
+    }
+
+    fn visit_struct_access(&mut self, expr: &'ast StructAccess) -> Result<(), io::Error> {
+        self.visit_expression(&expr.identifier)?;
+        self.write(".")?;
+        self.visit_expression(&expr.field)
     }
 }
