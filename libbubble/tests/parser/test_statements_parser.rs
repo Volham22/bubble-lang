@@ -303,6 +303,21 @@ fn test_valid_statements(#[case] code: &str) {
     }
 "#
 )]
+#[case::import_statment(
+    r#"
+    import "foo";
+"#
+)]
+#[case::qualified_import(
+    r#"
+    import {foo, bar, baz} from "foo";
+"#
+)]
+#[case::qualified_empty_import(
+    r#"
+    import {foo, bar, baz} from "foo";
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

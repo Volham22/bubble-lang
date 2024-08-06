@@ -167,6 +167,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for IntegerInference {
             }
             GlobalStatement::Struct(s) => self.visit_struct(s),
             GlobalStatement::Let(l) => self.visit_let(l),
+            GlobalStatement::Import(imp) => self.visit_import_statement(imp),
         }
     }
 

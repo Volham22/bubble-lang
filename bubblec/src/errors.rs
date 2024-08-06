@@ -53,7 +53,7 @@ fn emit_parser_error<'a>(error: &'a ParserError, source_file: &'a Path, source_c
                 ),
             ),
         ),
-        lalrpop_util::ParseError::UnrecognizedEOF { location, expected } => display_error(
+        lalrpop_util::ParseError::UnrecognizedEof { location, expected } => display_error(
             Level::Error
                 .title("Unexpected end of file")
                 .snippet(

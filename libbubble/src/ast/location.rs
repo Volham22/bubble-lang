@@ -1,5 +1,5 @@
 macro_rules! impl_locatable {
-    ( $( $t:ty ),* ) => {
+    ( $( $t:ty ),+ $(,)? ) => {
 
         $(
             impl Locatable for $t {

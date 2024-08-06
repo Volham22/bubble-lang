@@ -828,6 +828,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
                         .into(),
                 );
             }
+            LiteralType::QualifiedAccess(_) => unreachable!("qualified access in translator"),
         }
 
         Ok(())

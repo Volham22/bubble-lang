@@ -11,6 +11,24 @@ pub enum GlobalStatement {
     Function(FunctionStatement),
     Struct(StructStatement),
     Let(LetStatement),
+    Import(ImportStatement),
+}
+
+#[derive(Debug, Clone)]
+pub struct ImportStatement {
+    pub module_path: String,
+    pub elements: Vec<String>,
+    pub(crate) location: TokenLocation,
+}
+
+impl ImportStatement {
+    pub fn new(tk_begin: usize, tk_end: usize, module_path: String, elements: Vec<String>) -> Self {
+        Self {
+            module_path,
+            elements,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
 }
 
 pub type FunctionParameter = (crate::ast::Type, String);
@@ -271,10 +289,11 @@ impl_locatable!(
     ForStatement,
     FunctionStatement,
     IfStatement,
+    ImportStatement,
     LetStatement,
     ReturnStatement,
     Statement,
     Statements,
     StructStatement,
-    WhileStatement
+    WhileStatement,
 );

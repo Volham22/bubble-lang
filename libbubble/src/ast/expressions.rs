@@ -253,6 +253,24 @@ pub enum LiteralType {
     String(String),
     Null(Null),
     StructInit(StructInitialization),
+    QualifiedAccess(QualifiedAccess),
+}
+
+#[derive(Clone, Debug)]
+pub struct QualifiedAccess {
+    pub module_name: String,
+    pub identifier: String,
+    pub(crate) location: TokenLocation,
+}
+
+impl QualifiedAccess {
+    pub fn new(tk_begin: usize, tk_end: usize, module_name: String, identifier: String) -> Self {
+        Self {
+            module_name,
+            identifier,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -326,7 +344,8 @@ impl_locatable!(
     Deref,
     Literal,
     Null,
+    QualifiedAccess,
     StructAccess,
     StructFieldInitializer,
-    StructInitialization
+    StructInitialization,
 );

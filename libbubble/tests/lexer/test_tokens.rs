@@ -104,6 +104,15 @@ use rstest::rstest;
        Token::Identifier("b".to_string())
     ]
 )]
+#[case::import("import", &[ Token::Import ])]
+#[case::from("from", &[ Token::From ])]
+#[case::double_colon("::", &[ Token::DoubleColon ])]
+#[case::qualified_access("foo::bar", &[
+        Token::Identifier("foo".to_string()),
+        Token::DoubleColon,
+        Token::Identifier("bar".to_string())
+    ]
+)]
 fn test_code_lexing(#[case] source_code: &str, #[case] expected: &[Token]) {
     let lexer = Token::lexer(source_code);
     let tokens: Vec<Token> = lexer.collect();

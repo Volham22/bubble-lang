@@ -28,6 +28,16 @@ pub GlobalStatement: GlobalStatement = {
     <function:Function> => GlobalStatement::Function(function),
     <strct:Struct> => GlobalStatement::Struct(strct),
     <let_stmt:Let> => GlobalStatement::Let(let_stmt),
+    <import:ImportStatement> => GlobalStatement::Import(import),
+}
+
+ImportStatement: ImportStatement = {
+    <l:@L> "import" <module_name:"string"> ";" <r:@R> => {
+        ImportStatement::new(l, r, module_name, Vec::new())
+    },
+    <l:@L> "import" "{" <parameters:Comma<"identifier">> "}" "from" <module_name:"string"> ";" <r:@R> => {
+        ImportStatement::new(l, r, module_name, parameters)
+    }
 }
 
 Function: FunctionStatement = {
@@ -273,6 +283,9 @@ Primary: Literal = {
     <l:@L> <val:"int">        <r:@R> => Literal::new(l, r, LiteralType::Integer(val)),
     <l:@L> <val:"float">      <r:@R> => Literal::new(l, r, LiteralType::Float(val)),
     <l:@L> <val:"identifier"> <r:@R> => Literal::new(l, r, LiteralType::Identifier(val)),
+    <l:@L> <module_name:"identifier"> "::" <identifier:"identifier"> <r:@R> => {
+        Literal::new(l, r, LiteralType::QualifiedAccess(QualifiedAccess::new(l, r, module_name, identifier)))
+    },
     <l:@L> <val:"string">     <r:@R> => Literal::new(l, r, LiteralType::String(val)),
     <l:@L> "struct" "{" <fields_init:Comma<StructFieldInit>> "}" <r:@R> => Literal::new(l, r, LiteralType::StructInit(StructInitialization::new(l, r, fields_init))),
 }
@@ -314,7 +327,10 @@ extern {
         "while" => Token::While,
         "return" => Token::Return,
         "let" => Token::Let,
+        "import" => Token::Import,
+        "from" => Token::From,
         "break" => Token::Break,
+        "::" => Token::DoubleColon,
         "continue" => Token::Continue,
         "extern" => Token::Extern,
         "true" => Token::True,

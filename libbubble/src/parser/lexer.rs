@@ -69,6 +69,8 @@ pub enum Token {
     Equal,
     #[token(".")]
     Dot,
+    #[token("::")]
+    DoubleColon,
 
     // Operators
     #[token("+")]
@@ -127,6 +129,10 @@ pub enum Token {
     False,
     #[token("extern")]
     Extern,
+    #[token("import")]
+    Import,
+    #[token("from")]
+    From,
 
     // =================
     //       Types

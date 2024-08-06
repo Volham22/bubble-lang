@@ -239,6 +239,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
                 self.write("]")
             }
             super::LiteralType::StructInit(si) => self.visit_struct_init(si),
+            super::LiteralType::QualifiedAccess(qa) => self.visit_qualified_access(qa),
         }
     }
 
