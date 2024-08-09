@@ -18,6 +18,7 @@ use libbubble::{
 };
 
 const LD_LOADER_PATH: &str = "/lib64/ld-linux-x86-64.so.2";
+const MODULE_NAME: &str = "test_module";
 
 pub fn parse_statements_input(code: &str) -> StatementsParserResult<Statements> {
     let lexer = Lexer::new(code);
@@ -40,10 +41,10 @@ pub fn run_type_checker(code: &str) -> Result<(), TypeCheckerError> {
 
 pub fn build_and_link(code: &str, outname: &str, executable_name: &str) {
     let mut stmts = parse_global_statements_input(code).expect("Failed to parse code");
-    let mut binder = Binder::default();
+    let mut binder = Binder::new(MODULE_NAME);
     binder.bind_statements(&mut stmts).expect("Binder failed");
     type_check(&mut stmts).expect("Type checker failed");
-    stmts = desugar_ast(stmts);
+    stmts = desugar_ast(stmts, MODULE_NAME);
 
     let context = Context::create();
     let module = context.create_module("module");

@@ -32,7 +32,13 @@ fn parse_source_code(
 }
 
 fn run_type_checker(stmts: &mut [ast::GlobalStatement], source_path: &Path) -> CompilerResult<()> {
-    let mut binder = Binder::default();
+    let mut binder = Binder::new(
+        source_path
+            .file_stem()
+            .map(|s| s.to_str())
+            .expect("not a file")
+            .expect("file name is not utf-8"),
+    );
     binder
         .bind_statements(stmts)
         .map_err(|error| CompilerError::Binder {
@@ -55,7 +61,14 @@ fn build_object(
 ) -> CompilerResult<()> {
     let mut stmts = parse_source_code(source_code, source_path)?;
     run_type_checker(&mut stmts, source_path)?;
-    let desugared_stmts = desugar_ast(stmts);
+    let desugared_stmts = desugar_ast(
+        stmts,
+        source_path
+            .file_stem()
+            .map(|name| name.to_str())
+            .expect("not a file")
+            .expect("file name is not valid utf-8"),
+    );
     let llvm_context = Context::create();
     let llvm_module = llvm_context.create_module(
         object_name

@@ -35,7 +35,7 @@ fn main() {
     let mut binder = Binder::default();
     binder.bind_statements(&mut stmts).expect("Binder failed");
     run_type_checker(&mut stmts).expect("Type checker failed");
-    stmts = desugar_ast(stmts);
+    stmts = desugar_ast(stmts, "test");
     let mut printer = Printer::default();
     printer.print(&stmts).expect("failed to print");
 

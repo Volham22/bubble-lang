@@ -12,9 +12,10 @@ use std::{collections::HashMap, convert::Infallible};
 
 use crate::{
     ast::{
-        self, AddrOf, ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call,
-        Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
-        Literal, LiteralType, OpType, ReturnStatement, StructStatement, Visitor, WhileStatement,
+        self, AddrOf, ArrayInitializer, Assignment, BinaryOperation, Bindable, BreakStatement,
+        Call, Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement,
+        LetStatement, Literal, LiteralType, OpType, ReturnStatement, StructStatement, Visitor,
+        WhileStatement,
     },
     codegen::locals_collector::SymbolsMap,
     type_system::{self, Typable, Type},
@@ -839,7 +840,7 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
             Vec::with_capacity(expr.arguments.len());
         let fn_value = self
             .module
-            .get_function(&expr.callee)
+            .get_function(&expr.get_function_def().name)
             .expect("Function not found");
 
         for arg in &expr.arguments {
