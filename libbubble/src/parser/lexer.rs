@@ -133,6 +133,8 @@ pub enum Token {
     Import,
     #[token("from")]
     From,
+    #[token("export")]
+    Export,
 
     // =================
     //       Types

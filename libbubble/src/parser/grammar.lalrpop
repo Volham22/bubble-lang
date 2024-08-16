@@ -41,14 +41,14 @@ ImportStatement: ImportStatement = {
 }
 
 Function: FunctionStatement = {
-    <l:@L> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" "{" <body:Statements> "}" <r:@R> => {
-        FunctionStatement::new(l, r, name, parameters, Type::new(l, r, TypeKind::Void), false, Some(body))
+    <l:@L> <exported:"export"?> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" "{" <body:Statements> "}" <r:@R> => {
+        FunctionStatement::new(l, r, name, parameters, Type::new(l, r, TypeKind::Void), false, exported.is_some(), Some(body))
     },
-    <l:@L> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" ":" <return_type:Type> "{" <body:Statements> "}" <r:@R> => {
-        FunctionStatement::new(l, r, name, parameters, return_type, false, Some(body))
+    <l:@L> <exported:"export"?> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" ":" <return_type:Type> "{" <body:Statements> "}" <r:@R> => {
+        FunctionStatement::new(l, r, name, parameters, return_type, false, exported.is_some(), Some(body))
     },
     <l:@L> "extern" "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" ":" <return_type:Type> ";" <r:@R> => {
-        FunctionStatement::new(l, r, name, parameters, return_type, true, None)
+        FunctionStatement::new(l, r, name, parameters, return_type, true, false, None)
     },
 }
 
@@ -333,6 +333,7 @@ extern {
         "::" => Token::DoubleColon,
         "continue" => Token::Continue,
         "extern" => Token::Extern,
+        "export" => Token::Export,
         "true" => Token::True,
         "false" => Token::False,
         "u8" => Token::U8Ty,

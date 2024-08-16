@@ -318,6 +318,16 @@ fn test_valid_statements(#[case] code: &str) {
     import {foo, bar, baz} from "foo";
 "#
 )]
+#[case::exported_void_function(
+    r#"
+    export function a() { 42; }
+"#
+)]
+#[case::exported_return_type_function(
+    r#"
+    export function a(): i32 { return 42; }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

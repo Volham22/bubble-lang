@@ -39,12 +39,14 @@ pub struct FunctionStatement {
     pub parameters: Vec<LetStatement>,
     pub return_type: crate::ast::Type,
     pub is_extern: bool,
+    pub is_exported: bool,
     pub body: Option<Statements>,
     pub(crate) location: TokenLocation,
     pub(crate) ty: Option<type_system::Type>,
 }
 
 impl FunctionStatement {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         tk_begin: usize,
         tk_end: usize,
@@ -52,6 +54,7 @@ impl FunctionStatement {
         parameters: Vec<FunctionParameter>,
         return_type: crate::ast::Type,
         is_extern: bool,
+        is_exported: bool,
         body: Option<Statements>,
     ) -> Self {
         Self {
@@ -62,6 +65,7 @@ impl FunctionStatement {
                 .collect(),
             return_type,
             is_extern,
+            is_exported,
             body,
             location: TokenLocation::new(tk_begin, tk_end),
             ty: None,

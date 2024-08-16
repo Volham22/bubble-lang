@@ -113,6 +113,8 @@ use rstest::rstest;
         Token::Identifier("bar".to_string())
     ]
 )]
+#[case::export("export", &[Token::Export])]
+#[case::export_function("export function", &[Token::Export, Token::Function])]
 fn test_code_lexing(#[case] source_code: &str, #[case] expected: &[Token]) {
     let lexer = Token::lexer(source_code);
     let tokens: Vec<Token> = lexer.collect();
