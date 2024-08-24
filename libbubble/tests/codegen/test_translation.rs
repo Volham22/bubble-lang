@@ -1,11 +1,13 @@
 use std::{
+    fs,
     io::Read,
     process::{Command, Stdio},
 };
 
+use libbubble::ast;
 use rstest::rstest;
 
-use crate::assets::build_and_link;
+use crate::assets::{build_and_link, build_objects_and_link};
 
 #[rstest]
 #[case::main_return_0(
@@ -561,4 +563,46 @@ fn test_translation_with_stdout(
 
     assert_eq!(result.code().unwrap(), expected_return_code);
     assert_eq!(read_string, expected_stdout);
+}
+
+#[rstest]
+#[case::unqualifed_import(
+    r#"
+    import "test_module";
+
+    function main(): i32 {
+        return test_module::zero();
+    }
+    "#,
+    r#"
+    export function zero(): i32 {
+        return 0;
+    }
+    "#
+)]
+fn test_modules(#[case] main_code: &str, #[case] module_code: &str) {
+    let temp_dir = tempfile::tempdir().expect("failed to create tempdir");
+    let module_path = temp_dir.path().join("test_module.blb");
+    let main_path = temp_dir.path().join("main.blb");
+    let executable_path = temp_dir.path().join("test");
+    fs::write(&module_path, module_code).expect("failed to write module");
+
+    build_objects_and_link(
+        &[(main_code, &main_path), (module_code, &module_path)],
+        &executable_path.to_string_lossy(),
+        Some(|mut stmts: Vec<ast::GlobalStatement>| {
+            let ast::GlobalStatement::Import(i) = stmts.first_mut().expect("no first statement")
+            else {
+                return stmts;
+            };
+
+            i.module_path = module_path.to_string_lossy().to_string();
+            stmts
+        }),
+    );
+
+    let cmd = Command::new(executable_path)
+        .output()
+        .expect("failed to invoke executable");
+    assert!(cmd.status.success());
 }

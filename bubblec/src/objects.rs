@@ -8,7 +8,7 @@ use inkwell::{
 use libbubble::{
     ast,
     codegen::build_module,
-    desugar::desugar_ast,
+    desugar::{desugar_ast, run_imports},
     parser::{grammar::GlobalStatementsParser, lexer::Lexer},
     type_system::{self, binder::Binder},
 };
@@ -32,7 +32,13 @@ fn parse_source_code(
 }
 
 fn run_type_checker(stmts: &mut [ast::GlobalStatement], source_path: &Path) -> CompilerResult<()> {
-    let mut binder = Binder::default();
+    let mut binder = Binder::new(
+        source_path
+            .file_stem()
+            .map(|s| s.to_str())
+            .expect("not a file")
+            .expect("file name is not utf-8"),
+    );
     binder
         .bind_statements(stmts)
         .map_err(|error| CompilerError::Binder {
@@ -54,8 +60,19 @@ fn build_object(
     emit_llvmir: bool,
 ) -> CompilerResult<()> {
     let mut stmts = parse_source_code(source_code, source_path)?;
-    run_type_checker(&mut stmts, source_path)?;
-    let desugared_stmts = desugar_ast(stmts);
+    stmts = run_imports(stmts).map_err(|e| CompilerError::ImportError {
+        error: Box::new(e),
+        source_file: source_path.to_path_buf(),
+    })?;
+    let mut desugared_stmts = desugar_ast(
+        stmts,
+        source_path
+            .file_stem()
+            .map(|name| name.to_str())
+            .expect("not a file")
+            .expect("file name is not valid utf-8"),
+    );
+    run_type_checker(&mut desugared_stmts, source_path)?;
     let llvm_context = Context::create();
     let llvm_module = llvm_context.create_module(
         object_name

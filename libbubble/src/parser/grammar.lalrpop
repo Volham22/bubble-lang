@@ -28,17 +28,27 @@ pub GlobalStatement: GlobalStatement = {
     <function:Function> => GlobalStatement::Function(function),
     <strct:Struct> => GlobalStatement::Struct(strct),
     <let_stmt:Let> => GlobalStatement::Let(let_stmt),
+    <import:ImportStatement> => GlobalStatement::Import(import),
+}
+
+ImportStatement: ImportStatement = {
+    <l:@L> "import" <module_name:"string"> ";" <r:@R> => {
+        ImportStatement::new(l, r, module_name, Vec::new())
+    },
+    <l:@L> "import" "{" <parameters:Comma<"identifier">> "}" "from" <module_name:"string"> ";" <r:@R> => {
+        ImportStatement::new(l, r, module_name, parameters)
+    }
 }
 
 Function: FunctionStatement = {
-    <l:@L> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" "{" <body:Statements> "}" <r:@R> => {
-        FunctionStatement::new(l, r, name, parameters, Type::new(l, r, TypeKind::Void), false, Some(body))
+    <l:@L> <exported:"export"?> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" "{" <body:Statements> "}" <r:@R> => {
+        FunctionStatement::new(l, r, name, parameters, Type::new(l, r, TypeKind::Void), false, exported.is_some(), Some(body))
     },
-    <l:@L> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" ":" <return_type:Type> "{" <body:Statements> "}" <r:@R> => {
-        FunctionStatement::new(l, r, name, parameters, return_type, false, Some(body))
+    <l:@L> <exported:"export"?> "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" ":" <return_type:Type> "{" <body:Statements> "}" <r:@R> => {
+        FunctionStatement::new(l, r, name, parameters, return_type, false, exported.is_some(), Some(body))
     },
     <l:@L> "extern" "function" <name:"identifier"> "(" <parameters:Comma<Parameter>> ")" ":" <return_type:Type> ";" <r:@R> => {
-        FunctionStatement::new(l, r, name, parameters, return_type, true, None)
+        FunctionStatement::new(l, r, name, parameters, return_type, true, false, None)
     },
 }
 
@@ -259,7 +269,7 @@ Group: Expression = {
     <p:Primary> => Expression::Literal(p),
     "(" <expr:Expr> ")" => Expression::Group(Box::new(expr)),
     <l:@L> <left:Group> "." <right:Primary> <r:@R> => Expression::StructAccess(StructAccess::new(l, r, Box::new(left), Box::new(Expression::Literal(right)))),
-    <l:@L> <callee:"identifier"> "(" <args:Comma<Expr>> ")" <r:@R> => Expression::Call(Call::new(l, r, callee, args)),
+    <l:@L> <callee:Primary> "(" <args:Comma<Expr>> ")" <r:@R> => Expression::Call(Call::new(l, r, callee, args)),
 }
 
 StructFieldInit: StructFieldInitializer = {
@@ -273,6 +283,9 @@ Primary: Literal = {
     <l:@L> <val:"int">        <r:@R> => Literal::new(l, r, LiteralType::Integer(val)),
     <l:@L> <val:"float">      <r:@R> => Literal::new(l, r, LiteralType::Float(val)),
     <l:@L> <val:"identifier"> <r:@R> => Literal::new(l, r, LiteralType::Identifier(val)),
+    <l:@L> <module_name:"identifier"> "::" <identifier:"identifier"> <r:@R> => {
+        Literal::new(l, r, LiteralType::QualifiedAccess(QualifiedAccess::new(l, r, module_name, identifier)))
+    },
     <l:@L> <val:"string">     <r:@R> => Literal::new(l, r, LiteralType::String(val)),
     <l:@L> "struct" "{" <fields_init:Comma<StructFieldInit>> "}" <r:@R> => Literal::new(l, r, LiteralType::StructInit(StructInitialization::new(l, r, fields_init))),
 }
@@ -314,9 +327,13 @@ extern {
         "while" => Token::While,
         "return" => Token::Return,
         "let" => Token::Let,
+        "import" => Token::Import,
+        "from" => Token::From,
         "break" => Token::Break,
+        "::" => Token::DoubleColon,
         "continue" => Token::Continue,
         "extern" => Token::Extern,
+        "export" => Token::Export,
         "true" => Token::True,
         "false" => Token::False,
         "u8" => Token::U8Ty,

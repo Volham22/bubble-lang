@@ -483,6 +483,7 @@ impl<'ast> MutableVisitor<'ast, TypeCheckerError> for TypeChecker {
                     fields: types,
                 })
             }
+            LiteralType::QualifiedAccess(_) => todo!(),
         };
 
         // The identifier type should be the array type. We need to do it

@@ -1,15 +1,20 @@
 use std::collections::HashMap;
 
-use crate::ast::{
-    Bindable, BreakStatement, Call, ContinueStatement, Definition, Expression, ForStatement,
-    FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType, Locatable,
-    MutableVisitor, ReturnStatement, StructAccess, StructStatement, Type, TypeKind, WhileStatement,
+use crate::{
+    ast::{
+        Bindable, BreakStatement, Call, ContinueStatement, Definition, Expression, ForStatement,
+        FunctionStatement, GlobalStatement, IfStatement, LetStatement, Literal, LiteralType,
+        Locatable, MutableVisitor, ReturnStatement, StructAccess, StructStatement, Type, TypeKind,
+        WhileStatement,
+    },
+    desugar,
 };
 
 use super::{errors::BinderError, utils::ScopedMap};
 
 #[derive(Default)]
-pub struct Binder {
+pub struct Binder<'a> {
+    module_name: &'a str,
     functions_statements: HashMap<String, *const FunctionStatement>,
     struct_statement: HashMap<String, *const StructStatement>,
     local_variables: ScopedMap<*const LetStatement>,
@@ -17,7 +22,14 @@ pub struct Binder {
     in_function: bool,
 }
 
-impl Binder {
+impl<'m> Binder<'m> {
+    pub fn new(module_name: &'m str) -> Self {
+        Self {
+            module_name,
+            ..Default::default()
+        }
+    }
+
     pub fn bind_statements(&mut self, stmts: &mut [GlobalStatement]) -> Result<(), BinderError> {
         for stmt in stmts {
             self.visit_global_statement(stmt)?;
@@ -50,7 +62,7 @@ impl Binder {
     }
 }
 
-impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
+impl<'ast> MutableVisitor<'ast, BinderError> for Binder<'_> {
     fn visit_function(&mut self, stmt: &'ast mut FunctionStatement) -> Result<(), BinderError> {
         for param in stmt.parameters.iter_mut() {
             self.visit_let(param)?;
@@ -80,7 +92,10 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
     }
 
     fn visit_struct(&mut self, stmt: &'ast mut StructStatement) -> Result<(), BinderError> {
-        self.struct_statement.insert(stmt.name.to_string(), stmt);
+        self.struct_statement.insert(
+            desugar::SymbolMangler::mangle_qualified(self.module_name, &stmt.name),
+            stmt,
+        );
 
         for (ty, _) in stmt.fields.iter_mut() {
             self.visit_type(ty)?;
@@ -198,7 +213,14 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
                         LiteralType::Identifier(name) => name,
                         _ => unreachable!(),
                     },
-                    Expression::Call(c) => &c.callee,
+                    Expression::Call(Call {
+                        callee:
+                            Literal {
+                                literal_type: LiteralType::Identifier(callee),
+                                ..
+                            },
+                        ..
+                    }) => callee,
                     _ => unreachable!(),
                 };
 
@@ -233,11 +255,23 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), BinderError> {
-        let declaration = self.functions_statements.get(&expr.callee);
+        let Literal {
+            literal_type: LiteralType::Identifier(callee),
+            ..
+        } = &expr.callee
+        else {
+            panic!("callee is {:?}", &expr.callee);
+        };
+        let mangle_name = desugar::SymbolMangler::mangle_qualified(self.module_name, callee);
+        let declaration = match self.functions_statements.get(&mangle_name) {
+            Some(d) => Some(d),
+            // Try without name mangling
+            None => self.functions_statements.get(callee),
+        };
         if declaration.is_none() {
             return Err(BinderError::UndeclaredFunction {
                 location: expr.get_location().clone(),
-                name: expr.callee.to_string(),
+                name: callee.clone(),
             });
         }
 
@@ -257,6 +291,15 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder {
                 let name = name.clone();
                 let declaration = self.struct_statement.get(&name);
                 if let Some(dec) = declaration {
+                    expr.set_definition(Definition::Struct(*dec));
+                    Ok(())
+                } else if let Some(dec) =
+                    self.struct_statement
+                        .get(&desugar::SymbolMangler::mangle_qualified(
+                            self.module_name,
+                            &name,
+                        ))
+                {
                     expr.set_definition(Definition::Struct(*dec));
                     Ok(())
                 } else {

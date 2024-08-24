@@ -48,6 +48,8 @@ use rstest::rstest;
 #[case::null_expr("null")]
 #[case::deref("deref x")]
 #[case::deref_field_of_ptr("(deref x).y")]
+#[case::qualified_access("foo::bar")]
+#[case::qualified_call("foo::bar()")]
 fn test_valid_expression(#[case] code: &str) {
     let parser_result = parse_statements_input(code);
     assert!(

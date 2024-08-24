@@ -177,7 +177,7 @@ impl Assignment {
 
 #[derive(Debug, Clone)]
 pub struct Call {
-    pub callee: String,
+    pub callee: Literal,
     pub arguments: Vec<Expression>,
     location: TokenLocation,
     pub(crate) ty: Option<type_system::Type>,
@@ -185,7 +185,12 @@ pub struct Call {
 }
 
 impl Call {
-    pub fn new(tk_begin: usize, tk_end: usize, callee: String, arguments: Vec<Expression>) -> Self {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        callee: Literal,
+        arguments: Vec<Expression>,
+    ) -> Self {
         Self {
             callee,
             arguments,
@@ -253,6 +258,24 @@ pub enum LiteralType {
     String(String),
     Null(Null),
     StructInit(StructInitialization),
+    QualifiedAccess(QualifiedAccess),
+}
+
+#[derive(Clone, Debug)]
+pub struct QualifiedAccess {
+    pub module_name: String,
+    pub identifier: String,
+    pub(crate) location: TokenLocation,
+}
+
+impl QualifiedAccess {
+    pub fn new(tk_begin: usize, tk_end: usize, module_name: String, identifier: String) -> Self {
+        Self {
+            module_name,
+            identifier,
+            location: TokenLocation::new(tk_begin, tk_end),
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -326,7 +349,8 @@ impl_locatable!(
     Deref,
     Literal,
     Null,
+    QualifiedAccess,
     StructAccess,
     StructFieldInitializer,
-    StructInitialization
+    StructInitialization,
 );

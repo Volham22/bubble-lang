@@ -239,11 +239,12 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
                 self.write("]")
             }
             super::LiteralType::StructInit(si) => self.visit_struct_init(si),
+            super::LiteralType::QualifiedAccess(qa) => self.visit_qualified_access(qa),
         }
     }
 
     fn visit_call(&mut self, expr: &Call) -> PrinterResult {
-        self.write(&expr.callee)?;
+        self.visit_literal(&expr.callee)?;
         self.write("(")?;
 
         for arg in &expr.arguments {

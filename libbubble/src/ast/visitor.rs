@@ -1,8 +1,9 @@
 use super::{
     AddrOf, ArrayInitializer, Assignment, BinaryOperation, BreakStatement, Call, ContinueStatement,
-    Deref, Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement, LetStatement,
-    Literal, ReturnStatement, Statement, StatementKind, Statements, StructAccess,
-    StructInitialization, StructStatement, Type, TypeKind, WhileStatement,
+    Deref, Expression, ForStatement, FunctionStatement, GlobalStatement, IfStatement,
+    ImportStatement, LetStatement, Literal, QualifiedAccess, ReturnStatement, Statement,
+    StatementKind, Statements, StructAccess, StructInitialization, StructStatement, Type, TypeKind,
+    WhileStatement,
 };
 
 /// Default AST visitor
@@ -34,6 +35,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
             GlobalStatement::Function(f) => self.visit_function(f),
             GlobalStatement::Struct(s) => self.visit_struct(s),
             GlobalStatement::Let(l) => self.visit_let(l),
+            GlobalStatement::Import(imp) => self.visit_import_statement(imp),
         }
     }
 
@@ -137,6 +139,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
     }
 
     fn visit_call(&mut self, expr: &'ast Call) -> Result<(), E> {
+        self.visit_literal(&expr.callee)?;
         for expr in &expr.arguments {
             self.visit_expression(expr)?;
         }
@@ -185,6 +188,14 @@ pub trait Visitor<'ast, E: std::error::Error> {
         self.visit_expression(&expr.identifier)?;
         self.visit_expression(&expr.field)
     }
+
+    fn visit_import_statement(&mut self, _stmt: &'ast ImportStatement) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_qualified_access(&mut self, _expr: &'ast QualifiedAccess) -> Result<(), E> {
+        Ok(())
+    }
 }
 
 pub trait MutableVisitor<'ast, E: std::error::Error> {
@@ -193,6 +204,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
             GlobalStatement::Function(f) => self.visit_function(f),
             GlobalStatement::Struct(s) => self.visit_struct(s),
             GlobalStatement::Let(l) => self.visit_let(l),
+            GlobalStatement::Import(imp) => self.visit_import_statement(imp),
         }
     }
 
@@ -328,6 +340,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), E> {
+        self.visit_literal(&mut expr.callee)?;
         for expr in &mut expr.arguments {
             self.visit_expression(expr)?;
         }
@@ -375,5 +388,13 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
     fn visit_struct_access(&mut self, stmt: &'ast mut StructAccess) -> Result<(), E> {
         self.visit_expression(&mut stmt.identifier)?;
         self.visit_expression(&mut stmt.field)
+    }
+
+    fn visit_import_statement(&mut self, _stmt: &'ast mut ImportStatement) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_qualified_access(&mut self, _expr: &'ast QualifiedAccess) -> Result<(), E> {
+        Ok(())
     }
 }
