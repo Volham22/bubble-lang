@@ -177,7 +177,7 @@ impl Assignment {
 
 #[derive(Debug, Clone)]
 pub struct Call {
-    pub callee: String,
+    pub callee: Literal,
     pub arguments: Vec<Expression>,
     location: TokenLocation,
     pub(crate) ty: Option<type_system::Type>,
@@ -185,7 +185,12 @@ pub struct Call {
 }
 
 impl Call {
-    pub fn new(tk_begin: usize, tk_end: usize, callee: String, arguments: Vec<Expression>) -> Self {
+    pub fn new(
+        tk_begin: usize,
+        tk_end: usize,
+        callee: Literal,
+        arguments: Vec<Expression>,
+    ) -> Self {
         Self {
             callee,
             arguments,

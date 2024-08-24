@@ -213,7 +213,14 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder<'_> {
                         LiteralType::Identifier(name) => name,
                         _ => unreachable!(),
                     },
-                    Expression::Call(c) => &c.callee,
+                    Expression::Call(Call {
+                        callee:
+                            Literal {
+                                literal_type: LiteralType::Identifier(callee),
+                                ..
+                            },
+                        ..
+                    }) => callee,
                     _ => unreachable!(),
                 };
 
@@ -248,16 +255,23 @@ impl<'ast> MutableVisitor<'ast, BinderError> for Binder<'_> {
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), BinderError> {
-        let mangle_name = desugar::SymbolMangler::mangle_qualified(self.module_name, &expr.callee);
+        let Literal {
+            literal_type: LiteralType::Identifier(callee),
+            ..
+        } = &expr.callee
+        else {
+            panic!("callee is {:?}", &expr.callee);
+        };
+        let mangle_name = desugar::SymbolMangler::mangle_qualified(self.module_name, callee);
         let declaration = match self.functions_statements.get(&mangle_name) {
             Some(d) => Some(d),
             // Try without name mangling
-            None => self.functions_statements.get(&expr.callee),
+            None => self.functions_statements.get(callee),
         };
         if declaration.is_none() {
             return Err(BinderError::UndeclaredFunction {
                 location: expr.get_location().clone(),
-                name: expr.callee.to_string(),
+                name: callee.clone(),
             });
         }
 

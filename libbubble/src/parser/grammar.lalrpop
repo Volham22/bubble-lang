@@ -269,7 +269,7 @@ Group: Expression = {
     <p:Primary> => Expression::Literal(p),
     "(" <expr:Expr> ")" => Expression::Group(Box::new(expr)),
     <l:@L> <left:Group> "." <right:Primary> <r:@R> => Expression::StructAccess(StructAccess::new(l, r, Box::new(left), Box::new(Expression::Literal(right)))),
-    <l:@L> <callee:"identifier"> "(" <args:Comma<Expr>> ")" <r:@R> => Expression::Call(Call::new(l, r, callee, args)),
+    <l:@L> <callee:Primary> "(" <args:Comma<Expr>> ")" <r:@R> => Expression::Call(Call::new(l, r, callee, args)),
 }
 
 StructFieldInit: StructFieldInitializer = {

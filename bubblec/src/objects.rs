@@ -8,7 +8,7 @@ use inkwell::{
 use libbubble::{
     ast,
     codegen::build_module,
-    desugar::desugar_ast,
+    desugar::{desugar_ast, run_imports},
     parser::{grammar::GlobalStatementsParser, lexer::Lexer},
     type_system::{self, binder::Binder},
 };
@@ -60,8 +60,11 @@ fn build_object(
     emit_llvmir: bool,
 ) -> CompilerResult<()> {
     let mut stmts = parse_source_code(source_code, source_path)?;
-    run_type_checker(&mut stmts, source_path)?;
-    let desugared_stmts = desugar_ast(
+    stmts = run_imports(stmts).map_err(|e| CompilerError::ImportError {
+        error: Box::new(e),
+        source_file: source_path.to_path_buf(),
+    })?;
+    let mut desugared_stmts = desugar_ast(
         stmts,
         source_path
             .file_stem()
@@ -69,6 +72,7 @@ fn build_object(
             .expect("not a file")
             .expect("file name is not valid utf-8"),
     );
+    run_type_checker(&mut desugared_stmts, source_path)?;
     let llvm_context = Context::create();
     let llvm_module = llvm_context.create_module(
         object_name

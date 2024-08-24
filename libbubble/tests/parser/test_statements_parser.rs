@@ -328,6 +328,16 @@ fn test_valid_statements(#[case] code: &str) {
     export function a(): i32 { return 42; }
 "#
 )]
+#[case::import_and_function(
+    r#"
+    import "module";
+
+    function main(): i64 {
+        module::add(1, 1);
+        return 0;
+    }
+"#
+)]
 fn test_valid_global_statements(#[case] code: &str) {
     let parser_result = parse_global_statements_input(code);
     assert!(

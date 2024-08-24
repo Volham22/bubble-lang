@@ -276,12 +276,16 @@ impl<'ast, 'ctx, 'module> Visitor<'ast, Infallible> for Translator<'ctx, 'ast, '
         let fn_val = self.module.add_function(
             &stmt.name,
             fn_ty,
-            Some(if stmt.body.is_some() {
-                // We don't want external function to be exported
-                Linkage::External
-            } else {
-                Linkage::ExternalWeak
-            }),
+            // Linkage is visible to the outside world if the function is extern or exported.
+            // Otherwise we use internal by default. In bubble all functions are considered
+            // as if they were declared as `static` in C.
+            Some(
+                if stmt.is_exported || stmt.is_extern || stmt.name == "main" {
+                    Linkage::External
+                } else {
+                    Linkage::Internal
+                },
+            ),
         );
 
         // Stop function generation here it's an extern declaration

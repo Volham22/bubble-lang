@@ -9,7 +9,7 @@ pub fn mangle_names(
     let mut mangler = SymbolMangler::new(module_name);
     for stmt in global_stmts.iter_mut() {
         match mangler.visit_global_statement(stmt) {
-            Ok(()) => continue,
+            Ok(()) => (),
             Err(_) => unreachable!(), // name mangling is Infallible
         }
     }
@@ -36,13 +36,27 @@ impl<'a> SymbolMangler<'a> {
 }
 
 impl<'a, 'ast> MutableVisitor<'ast, Infallible> for SymbolMangler<'a> {
+    fn visit_global_statement(
+        &mut self,
+        stmt: &'ast mut ast::GlobalStatement,
+    ) -> Result<(), Infallible> {
+        match stmt {
+            ast::GlobalStatement::Struct(s) => self.visit_struct(s),
+            ast::GlobalStatement::Function(f) => self.visit_function(f),
+            _ => Ok(()),
+        }
+    }
+
     fn visit_function(&mut self, stmt: &'ast mut ast::FunctionStatement) -> Result<(), Infallible> {
         // Do not mangle main function
-        if stmt.name == "main" || stmt.is_extern {
-            return Ok(());
+        if stmt.name != "main" && !stmt.is_extern {
+            stmt.name = self.mangle_name(&stmt.name);
         }
 
-        stmt.name = self.mangle_name(&stmt.name);
+        if let Some(body) = stmt.body.as_mut() {
+            self.visit_statements(body)?;
+        }
+
         Ok(())
     }
 

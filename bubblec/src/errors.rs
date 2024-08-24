@@ -6,6 +6,7 @@ use std::{
 use annotate_snippets::{Level, Message, Renderer, Snippet};
 use libbubble::{
     ast::location_to_span,
+    desugar::ImportError,
     parser::ParserError,
     type_system::{BinderError, TypeCheckerError},
 };
@@ -30,6 +31,11 @@ pub enum CompilerError {
     #[error("Type checking error: {error:?}")]
     TypeChecker {
         error: TypeCheckerError,
+        source_file: PathBuf,
+    },
+    #[error("{error}")]
+    ImportError {
+        error: Box<ImportError>,
         source_file: PathBuf,
     },
     #[error("IO error: {0:?}")]
@@ -330,10 +336,11 @@ fn emit_type_checker_error<'a>(
             expected,
         } => display_error(
             Level::Error
-                .title("Expression type is return statement is not correct")
+                .title("Expression type in return statement is not correct")
                 .snippet(
                     Snippet::source(source_code)
                         .origin(source_path_str)
+                        .fold(true)
                         .annotation(Level::Error.span(location_to_span!(location)).label(
                             &format!("Expected expression of type {expected:?} but got {got:?}"),
                         )),
@@ -469,6 +476,35 @@ fn emit_linker_error<'a>(linker_stderr: &'a str, linker_message: &'a str) -> Mes
     ])
 }
 
+fn emit_import_error(import_error: &ImportError, source_code: &str, source_code_path: &str) {
+    match import_error {
+        ImportError::IOError { .. } => display_error(emit_io_error(&import_error.to_string())),
+        ImportError::ParserFailed {
+            error,
+            source_file,
+            source_code,
+        } => emit_parser_error(error, source_file, source_code),
+        ImportError::NotFound {
+            function_name,
+            module_name,
+            location,
+        } => display_error(
+            Level::Error
+                .title(&format!("element not found in {module_name}"))
+                .snippet(
+                    Snippet::source(source_code)
+                        .fold(true)
+                        .origin(source_code_path)
+                        .annotation(
+                            Level::Error
+                                .span(location_to_span!(location))
+                                .label(&format!("{function_name} not found")),
+                        ),
+                ),
+        ),
+    }
+}
+
 pub fn print_error(error: &CompilerError, linker_path: &Path) -> io::Result<()> {
     match error {
         CompilerError::Parser { error, source_file } => {
@@ -494,6 +530,10 @@ pub fn print_error(error: &CompilerError, linker_path: &Path) -> io::Result<()> 
             );
 
             anstream::eprintln!("{}", RENDERER.render(emit_linker_error(e, &linker_message)));
+        }
+        CompilerError::ImportError { error, source_file } => {
+            let source_code = fs::read_to_string(source_file)?;
+            emit_import_error(error, &source_code, &source_file.to_string_lossy());
         }
     }
 

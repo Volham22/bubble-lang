@@ -64,7 +64,7 @@ pub fn desugar_for(global_stmts: Vec<GlobalStatement>) -> Vec<GlobalStatement> {
     for stmt in global_stmts.into_iter() {
         match stmt {
             // Extern functions has no so statements
-            GlobalStatement::Function(fn_stmt) if !fn_stmt.is_extern => {
+            GlobalStatement::Function(fn_stmt) if fn_stmt.body.is_some() => {
                 let FunctionStatement {
                     name,
                     parameters,

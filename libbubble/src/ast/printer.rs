@@ -244,7 +244,7 @@ impl<'ast, T: io::Write> Visitor<'ast, io::Error> for Printer<T> {
     }
 
     fn visit_call(&mut self, expr: &Call) -> PrinterResult {
-        self.write(&expr.callee)?;
+        self.visit_literal(&expr.callee)?;
         self.write("(")?;
 
         for arg in &expr.arguments {

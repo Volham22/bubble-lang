@@ -10,6 +10,7 @@ lalrpop = "0.20.2"
 
 [dev-dependencies]
 rstest = "0.17.0"
+tempfile = "3.12.0"
 
 [dependencies]
 inkwell = { workspace = true }

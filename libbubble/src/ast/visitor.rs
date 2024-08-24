@@ -139,6 +139,7 @@ pub trait Visitor<'ast, E: std::error::Error> {
     }
 
     fn visit_call(&mut self, expr: &'ast Call) -> Result<(), E> {
+        self.visit_literal(&expr.callee)?;
         for expr in &expr.arguments {
             self.visit_expression(expr)?;
         }
@@ -339,6 +340,7 @@ pub trait MutableVisitor<'ast, E: std::error::Error> {
     }
 
     fn visit_call(&mut self, expr: &'ast mut Call) -> Result<(), E> {
+        self.visit_literal(&mut expr.callee)?;
         for expr in &mut expr.arguments {
             self.visit_expression(expr)?;
         }
